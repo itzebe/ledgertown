@@ -1,148 +1,71 @@
-// Ledgertown local play server.
+// Ledgertown public play server.
 //
-// Serves a small UI and proxies the player's actions to the REAL deployed
-// NEAR testnet contract. Every number the UI shows comes from an RPC view of
-// `town.ledgertown.testnet`; every button issues a real signed transaction.
+// Defaults to READ-ONLY: it serves the UI and reads real NEAR testnet contract
+// state through RPC views, requiring no keys whatsoever. Bounded, non-owner
+// play actions can be enabled explicitly by supplying a dedicated demo account
+// key via environment variables.
 //
-//   node web/server.js      -> http://localhost:3000
+//   node web/server.js                 -> read-only, http://127.0.0.1:3000
+//   HOST=0.0.0.0 PORT=10000 node web/server.js
 //
-// The player's testnet key is read from keys/identities.json (git-ignored).
-// This server is a LOCAL demo harness; it is not a production signing service.
+// Environment:
+//   PORT                     bind port (default 3000; Render sets this)
+//   HOST                     bind address (default 127.0.0.1)
+//   LEDGERTOWN_RPC           override the RPC pool (comma-separated)
+//   LEDGERTOWN_CONTRACT      contract account (default town.ledgertown.testnet)
+//   LEDGERTOWN_MODE          "read-only" (default) or "play"
+//   LEDGERTOWN_DEMO_ACCOUNT  demo signer account id (play mode only)
+//   LEDGERTOWN_DEMO_KEY      demo signer secret key (play mode only)
+//   LEDGERTOWN_ALLOW_ORIGIN  CORS allowlist (comma-separated)
+//
+// This server NEVER loads keys/identities.json and NEVER exposes owner methods
+// or the deposit action.
 import http from "node:http";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  connectTown,
-  getState,
-  tick,
-  deposit,
-  gather,
-  buy,
-  sell,
-  invest,
-  CONTRACT_ID,
-} from "../driver/town.js";
-import { loadIdentities } from "../driver/near.js";
+import { createHandler } from "./handler.js";
+import { createReadOnlyTown, createPlayTown, TESTNET_ENDPOINTS } from "./town-client.js";
+import { parseAllowlist } from "./guard.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PORT = process.env.PORT || 3000;
-// The POST endpoints sign with local testnet keys, so the play server has no
-// authentication. Bind to loopback by default; set HOST=0.0.0.0 only when you
-// deliberately want to expose it (e.g. a container that proxies it).
+const webRoot = path.join(root, "web");
+const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || "127.0.0.1";
-const near = await connectTown();
+const MODE = process.env.LEDGERTOWN_MODE === "play" ? "play" : "read-only";
+const ENDPOINTS = (process.env.LEDGERTOWN_RPC
+  ? process.env.LEDGERTOWN_RPC.split(",")
+  : TESTNET_ENDPOINTS
+).map((s) => s.trim()).filter(Boolean);
+const ORIGIN_ALLOWLIST = parseAllowlist(process.env.LEDGERTOWN_ALLOW_ORIGIN);
 
-// A short in-memory trail of the player's own transactions, so the UI can link
-// each action straight to the explorer. Purely presentational.
-const recentTxs = [];
-function remember(label, hash, merchant) {
-  recentTxs.unshift({ label, hash, merchant: merchant || null, at: Date.now() });
-  if (recentTxs.length > 25) recentTxs.pop();
+async function buildTown() {
+  if (MODE === "play") {
+    return createPlayTown({
+      accountId: process.env.LEDGERTOWN_DEMO_ACCOUNT,
+      secretKey: process.env.LEDGERTOWN_DEMO_KEY,
+      endpoints: ENDPOINTS,
+    });
+  }
+  return createReadOnlyTown({ endpoints: ENDPOINTS });
 }
 
-// The town auto-advances this often (ms) if nobody clicks. 0 disables.
-const AUTO_TICK_MS = Number(process.env.AUTO_TICK_MS || 0);
-if (AUTO_TICK_MS > 0) {
-  setInterval(async () => {
-    try {
-      await tick(near, "owner");
-    } catch {
-      /* rate-limited; skip this beat */
-    }
-  }, AUTO_TICK_MS);
-}
+const town = await buildTown();
+const server = http.createServer(
+  createHandler({
+    town,
+    config: { mode: MODE, originAllowlist: ORIGIN_ALLOWLIST, webRoot },
+    log: (m) => console.error(m),
+  })
+);
 
-function json(res, code, body) {
-  const data = JSON.stringify(body);
-  res.writeHead(code, { "Content-Type": "application/json", "Cache-Control": "no-store" });
-  res.end(data);
-}
-
-async function readBody(req) {
-  const chunks = [];
-  for await (const c of req) chunks.push(c);
-  return chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : {};
-}
-
-const routes = {
-  "GET /api/state": async () => {
-    const s = await getState(near);
-    const ids = loadIdentities();
-    return {
-      contract: CONTRACT_ID,
-      day: s.day,
-      town: s.town,
-      player: s.player,
-      merchants: s.merchants,
-      events: s.events,
-      accounts: Object.fromEntries(
-        Object.entries(ids).map(([k, v]) => [k, v.accountId])
-      ),
-      recentTxs,
-    };
-  },
-  "POST /api/tick": async () => {
-    const r = await tick(near, "owner");
-    return { hash: r.hash };
-  },
-  "POST /api/deposit": async (body) => {
-    const r = await deposit(near, String(body.near || "1"), "player");
-    return { hash: r.hash };
-  },
-  "POST /api/gather": async (body) => {
-    const r = await gather(near, body.good, Number(body.units), "player");
-    return { hash: r.hash };
-  },
-  "POST /api/buy": async (body) => {
-    const r = await buy(near, body.merchant, body.good, Number(body.units), "player");
-    return { hash: r.hash };
-  },
-  "POST /api/sell": async (body) => {
-    const r = await sell(near, body.merchant, body.good, Number(body.units), "player");
-    return { hash: r.hash };
-  },
-  "POST /api/invest": async (body) => {
-    const r = await invest(near, body.merchant, Number(body.amount), "player");
-    return { hash: r.hash };
-  },
-};
-
-function cleanError(e) {
-  const raw = String(e?.message || e);
-  // RPC wraps the reason in nested JSON; pull out the human-readable part.
-  const m = raw.match(/"ExecutionError":"([^"]+)"/);
-  let msg = m ? m[1] : raw;
-  msg = msg.replace(/^Smart contract panicked:\s*/, "");
-  return msg.slice(0, 200);
-}
-
-const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://localhost:${PORT}`);
-  const key = `${req.method} ${url.pathname}`;
-  try {
-    if (routes[key]) {
-      const body = req.method === "POST" ? await readBody(req) : {};
-      const out = await routes[key](body);
-      if (out.hash) remember(url.pathname.replace("/api/", ""), out.hash, body.merchant);
-      return json(res, 200, { ok: true, ...out });
-    }
-    // static
-    let file = url.pathname === "/" ? "/index.html" : url.pathname;
-    const full = path.join(root, "web", path.normalize(file).replace(/^(\.\.[/\\])+/, ""));
-    if (!full.startsWith(path.join(root, "web"))) return json(res, 403, { ok: false, error: "forbidden" });
-    if (!fs.existsSync(full)) return json(res, 404, { ok: false, error: "not found" });
-    const ext = path.extname(full);
-    const type = ext === ".html" ? "text/html" : ext === ".css" ? "text/css" : ext === ".js" ? "text/javascript" : "text/plain";
-    res.writeHead(200, { "Content-Type": type });
-    res.end(fs.readFileSync(full));
-  } catch (e) {
-    // Contract rule violations surface here as real, explainable refusals.
-    json(res, 400, { ok: false, error: cleanError(e) });
+server.listen(PORT, HOST, () => {
+  console.log(`Ledgertown server -> http://${HOST}:${PORT}  (mode: ${MODE})`);
+  console.log(`contract: ${town.contract}`);
+  if (MODE !== "play") {
+    console.log("read-only: no signing keys loaded; play actions are disabled.");
   }
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`Ledgertown play server -> http://${HOST}:${PORT}`);
-  console.log(`contract: ${CONTRACT_ID}`);
-});
+for (const sig of ["SIGINT", "SIGTERM"]) {
+  process.on(sig, () => server.close(() => process.exit(0)));
+}

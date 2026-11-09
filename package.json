@@ -12,7 +12,9 @@
     "demo": "node driver/demo.js",
     "serve": "node web/server.js",
     "test:agent": "node --test tests/*.test.js",
-    "test:contract": "cd contract && cargo test"
+    "test:contract": "cd contract && cargo test",
+    "test": "node --test tests/*.test.js",
+    "start": "node web/server.js"
   },
   "dependencies": {
     "near-api-js": "^5.1.1"

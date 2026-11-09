@@ -74,9 +74,13 @@ driver/              Node.js clients that talk to the deployed contract
   town.js            town client (state, tick, deposit, gather, buy, sell, invest)
   agent.js           constrained AI merchant policy -> merchant_decide
   demo.js            full lifecycle demo (flood -> insolvency -> revival)
-web/                 local play server + interface
-  server.js          proxies player actions to the contract
+web/                 public play server + interface
+  server.js          process bootstrap; binds HOST/PORT, fails closed
+  handler.js         HTTP routing, validation, rate limits, security headers
+  guard.js           pure helpers: validation, rate limit, decision wording
+  town-client.js     read-only (key-free) and play (demo-key) town clients
   index.html         the town ledger UI
+  app.js             UI script (external, so a strict CSP needs no inline JS)
 feasibility/         reference economic model (pure Python, no network)
   RULES.md           the normative economic rules
   simulate.py        the reference engine
@@ -121,9 +125,54 @@ node driver/deploy.js
 npm run serve                 # -> http://127.0.0.1:3000 (loopback only)
 ```
 
-> The play server signs with the local testnet keys and has no authentication, so
-> it binds to loopback by default. Set `HOST=0.0.0.0` only when you deliberately
-> want to expose it (e.g. a container that proxies it).
+The public server has two modes and **defaults to the safe one**:
+
+- **`read-only` (default).** Serves the UI and reads live contract state over public
+  testnet RPC. Loads **no keys at all**, so it is safe to expose. Trade buttons are
+  disabled in the UI and every action endpoint returns `503`.
+- **`play`.** Adds bounded, **non-owner** actions (`tick`, `gather`, `buy`, `sell`,
+  `invest`) signed by ONE dedicated demo account from the environment. `deposit`
+  (which attaches real NEAR) and every owner-only method (`reset`, `add_shock`,
+  `owner_withdraw`, `set_lifeline_enabled`, `seed_merchant`) are **never** exposed.
+
+```bash
+npm run serve                                   # read-only, http://127.0.0.1:3000
+
+# play mode (local, with a throwaway demo key)
+LEDGERTOWN_MODE=play \
+LEDGERTOWN_DEMO_ACCOUNT=your-demo.testnet \
+LEDGERTOWN_DEMO_KEY=ed25519:... \
+npm run serve
+```
+
+The server never reads `keys/identities.json`; the operator's owner and merchant keys
+must not exist in a public deployment.
+
+> **Shared player state.** The contract stores ONE shared `Player`, not per-visitor
+> state. Everyone who plays trades from the same purse. The UI states this plainly;
+> giving each visitor an independent purse would require a contract change (a separate
+> testnet migration), which is out of scope here.
+
+### Public deployment (Render, free plan)
+
+`render.yaml` is a Render Blueprint for a free web service:
+
+1. Render Dashboard → **New → Blueprint**, connect this GitHub repo, apply.
+2. The service builds with `npm install` and starts with `node web/server.js`,
+   binding `0.0.0.0:$PORT` (Render sets `PORT`). Health check: `/healthz`.
+3. Read-only mode works immediately with no secrets.
+4. For play mode: set `LEDGERTOWN_MODE=play`, then add `LEDGERTOWN_DEMO_ACCOUNT`
+   and `LEDGERTOWN_DEMO_KEY` in **Environment** (they are `sync: false` in the
+   blueprint, so they are never committed). Use a **dedicated** testnet account
+   holding only a little testnet NEAR.
+
+Free-tier notes (from Render's docs): a Free web service **spins down after 15
+minutes without inbound traffic** and cold-starts on the next request (expect a
+short delay). Free services also have limited build minutes. No paid add-on or
+database is required — the app keeps no persistent local state.
+
+> **Never** put a mainnet key, an owner key, or a merchant key in any hosting
+> dashboard. Only a dedicated, low-balance testnet demo key belongs there.
 
 ## Demo (one command)
 
