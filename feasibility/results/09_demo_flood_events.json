@@ -1,0 +1,14 @@
+[
+ {
+  "day": 23,
+  "merchant": "smith",
+  "event": "CLOSED",
+  "value": -4
+ },
+ {
+  "day": 50,
+  "merchant": "smith",
+  "event": "REOPENED",
+  "value": 116
+ }
+]

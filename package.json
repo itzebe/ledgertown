@@ -1,0 +1,20 @@
+{
+  "name": "ledgertown",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "keys": "node driver/keys.js",
+    "accounts": "node driver/accounts.js",
+    "deploy": "node driver/deploy.js",
+    "town": "node driver/town.js",
+    "agent": "node driver/agent.js",
+    "demo": "node driver/demo.js",
+    "serve": "node web/server.js",
+    "test:agent": "node --test tests/*.test.js",
+    "test:contract": "cd contract && cargo test"
+  },
+  "dependencies": {
+    "near-api-js": "^5.1.1"
+  }
+}

@@ -1,0 +1,1082 @@
+[
+{
+"day": 1,
+"merchant": "brewer",
+"cash": 416,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 1,
+"merchant": "miller",
+"cash": 347,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 1,
+"merchant": "smith",
+"cash": 455,
+"inv": 11,
+"list": 20,
+"state": "open",
+"sold": 9
+},
+{
+"day": 1,
+"merchant": "weaver",
+"cash": 425,
+"inv": 14,
+"list": 25,
+"state": "open",
+"sold": 6
+},
+{
+"day": 2,
+"merchant": "brewer",
+"cash": 424,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 2,
+"merchant": "miller",
+"cash": 354,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 2,
+"merchant": "smith",
+"cash": 500,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 2,
+"merchant": "weaver",
+"cash": 586,
+"inv": 8,
+"list": 31,
+"state": "open",
+"sold": 6
+},
+{
+"day": 3,
+"merchant": "brewer",
+"cash": 432,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 3,
+"merchant": "miller",
+"cash": 361,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 3,
+"merchant": "smith",
+"cash": 511,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 3,
+"merchant": "weaver",
+"cash": 651,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 4,
+"merchant": "brewer",
+"cash": 440,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 4,
+"merchant": "miller",
+"cash": 368,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 4,
+"merchant": "smith",
+"cash": 522,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 4,
+"merchant": "weaver",
+"cash": 662,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 5,
+"merchant": "brewer",
+"cash": 448,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 5,
+"merchant": "miller",
+"cash": 375,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 5,
+"merchant": "smith",
+"cash": 533,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 5,
+"merchant": "weaver",
+"cash": 673,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 6,
+"merchant": "brewer",
+"cash": 456,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 6,
+"merchant": "miller",
+"cash": 382,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 6,
+"merchant": "smith",
+"cash": 544,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 6,
+"merchant": "weaver",
+"cash": 684,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 7,
+"merchant": "brewer",
+"cash": 464,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 7,
+"merchant": "miller",
+"cash": 389,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 7,
+"merchant": "smith",
+"cash": 555,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 7,
+"merchant": "weaver",
+"cash": 695,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 8,
+"merchant": "brewer",
+"cash": 472,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 8,
+"merchant": "miller",
+"cash": 396,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 8,
+"merchant": "smith",
+"cash": 566,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 8,
+"merchant": "weaver",
+"cash": 706,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 9,
+"merchant": "brewer",
+"cash": 480,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 9,
+"merchant": "miller",
+"cash": 403,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 9,
+"merchant": "smith",
+"cash": 577,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 9,
+"merchant": "weaver",
+"cash": 717,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 10,
+"merchant": "brewer",
+"cash": 488,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 10,
+"merchant": "miller",
+"cash": 410,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 10,
+"merchant": "smith",
+"cash": 588,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 10,
+"merchant": "weaver",
+"cash": 728,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 11,
+"merchant": "brewer",
+"cash": 496,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 11,
+"merchant": "miller",
+"cash": 417,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 11,
+"merchant": "smith",
+"cash": 599,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 11,
+"merchant": "weaver",
+"cash": 739,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 12,
+"merchant": "brewer",
+"cash": 504,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 12,
+"merchant": "miller",
+"cash": 424,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 12,
+"merchant": "smith",
+"cash": 610,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 12,
+"merchant": "weaver",
+"cash": 750,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 13,
+"merchant": "brewer",
+"cash": 512,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 13,
+"merchant": "miller",
+"cash": 431,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 13,
+"merchant": "smith",
+"cash": 621,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 13,
+"merchant": "weaver",
+"cash": 761,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 14,
+"merchant": "brewer",
+"cash": 520,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 14,
+"merchant": "miller",
+"cash": 438,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 14,
+"merchant": "smith",
+"cash": 632,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 14,
+"merchant": "weaver",
+"cash": 772,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 15,
+"merchant": "brewer",
+"cash": 528,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 15,
+"merchant": "miller",
+"cash": 445,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 15,
+"merchant": "smith",
+"cash": 643,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 15,
+"merchant": "weaver",
+"cash": 783,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 16,
+"merchant": "brewer",
+"cash": 536,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 16,
+"merchant": "miller",
+"cash": 452,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 16,
+"merchant": "smith",
+"cash": 654,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 16,
+"merchant": "weaver",
+"cash": 794,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 17,
+"merchant": "brewer",
+"cash": 544,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 17,
+"merchant": "miller",
+"cash": 459,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 17,
+"merchant": "smith",
+"cash": 665,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 17,
+"merchant": "weaver",
+"cash": 805,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 18,
+"merchant": "brewer",
+"cash": 552,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 18,
+"merchant": "miller",
+"cash": 466,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 18,
+"merchant": "smith",
+"cash": 676,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 18,
+"merchant": "weaver",
+"cash": 816,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 19,
+"merchant": "brewer",
+"cash": 560,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 19,
+"merchant": "miller",
+"cash": 473,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 19,
+"merchant": "smith",
+"cash": 687,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 19,
+"merchant": "weaver",
+"cash": 827,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 20,
+"merchant": "brewer",
+"cash": 568,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 20,
+"merchant": "miller",
+"cash": 480,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 20,
+"merchant": "smith",
+"cash": 698,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 20,
+"merchant": "weaver",
+"cash": 838,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 21,
+"merchant": "brewer",
+"cash": 576,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 21,
+"merchant": "miller",
+"cash": 487,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 21,
+"merchant": "smith",
+"cash": 709,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 21,
+"merchant": "weaver",
+"cash": 849,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 22,
+"merchant": "brewer",
+"cash": 584,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 22,
+"merchant": "miller",
+"cash": 494,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 22,
+"merchant": "smith",
+"cash": 720,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 22,
+"merchant": "weaver",
+"cash": 860,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 23,
+"merchant": "brewer",
+"cash": 592,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 23,
+"merchant": "miller",
+"cash": 501,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 23,
+"merchant": "smith",
+"cash": 731,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 23,
+"merchant": "weaver",
+"cash": 871,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 24,
+"merchant": "brewer",
+"cash": 600,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 24,
+"merchant": "miller",
+"cash": 508,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 24,
+"merchant": "smith",
+"cash": 742,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 24,
+"merchant": "weaver",
+"cash": 882,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 25,
+"merchant": "brewer",
+"cash": 608,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 25,
+"merchant": "miller",
+"cash": 515,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 25,
+"merchant": "smith",
+"cash": 753,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 25,
+"merchant": "weaver",
+"cash": 893,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 26,
+"merchant": "brewer",
+"cash": 616,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 26,
+"merchant": "miller",
+"cash": 522,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 26,
+"merchant": "smith",
+"cash": 764,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 26,
+"merchant": "weaver",
+"cash": 904,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 27,
+"merchant": "brewer",
+"cash": 624,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 27,
+"merchant": "miller",
+"cash": 529,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 27,
+"merchant": "smith",
+"cash": 775,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 27,
+"merchant": "weaver",
+"cash": 915,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 28,
+"merchant": "brewer",
+"cash": 632,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 28,
+"merchant": "miller",
+"cash": 536,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 28,
+"merchant": "smith",
+"cash": 786,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 28,
+"merchant": "weaver",
+"cash": 926,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 29,
+"merchant": "brewer",
+"cash": 640,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 29,
+"merchant": "miller",
+"cash": 543,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 29,
+"merchant": "smith",
+"cash": 797,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 29,
+"merchant": "weaver",
+"cash": 937,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+},
+{
+"day": 30,
+"merchant": "brewer",
+"cash": 648,
+"inv": 11,
+"list": 15,
+"state": "open",
+"sold": 11
+},
+{
+"day": 30,
+"merchant": "miller",
+"cash": 550,
+"inv": 16,
+"list": 12,
+"state": "open",
+"sold": 16
+},
+{
+"day": 30,
+"merchant": "smith",
+"cash": 808,
+"inv": 9,
+"list": 21,
+"state": "open",
+"sold": 9
+},
+{
+"day": 30,
+"merchant": "weaver",
+"cash": 948,
+"inv": 6,
+"list": 33,
+"state": "open",
+"sold": 6
+}
+]

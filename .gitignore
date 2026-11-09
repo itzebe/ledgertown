@@ -1,0 +1,12 @@
+node_modules/
+keys/
+target/
+dist/
+__pycache__/
+*.pyc
+*.log
+*.out
+
+# Local env (never commit real values); keep the example
+.env
+!.env.example

@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ledgertown — an agent-run market town on NEAR</title>
+<style>
+  :root{
+    --paper:#f2ece0; --paper2:#eae2d3; --ink:#1b1815; --ink2:#4a4239;
+    --muted:#635a4d; --rule:#cdc2ad; --copper:#9c4f1e; --copper2:#b5642c;
+    --green:#3f6b3a; --red:#a1332a; --gold:#7a5a12;
+    --mono:"Iosevka", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink)}
+  body{font-family:var(--serif);font-size:16px;line-height:1.5;
+    background-image:radial-gradient(circle at 18% 12%,rgba(156,79,30,.05),transparent 40%),
+      radial-gradient(circle at 82% 88%,rgba(63,107,58,.05),transparent 42%);}
+  .num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  a{color:var(--copper);text-underline-offset:2px}
+  header{border-bottom:2px solid var(--ink);padding:18px 26px 14px;display:flex;
+    align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  .brand{display:flex;align-items:baseline;gap:14px}
+  .brand h1{font-size:30px;margin:0;letter-spacing:-.02em}
+  .brand .sub{color:var(--muted);font-size:13.5px;max-width:46ch}
+  .stamp{font-family:var(--mono);font-size:11.5px;color:var(--copper);
+    border:1px solid var(--copper);border-radius:2px;padding:3px 7px;letter-spacing:.06em;
+    text-transform:uppercase;white-space:nowrap}
+  .daybar{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
+  .daybar .d{font-family:var(--mono);font-size:40px;line-height:1;letter-spacing:-.03em}
+  .daybar .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+
+  main{max-width:1180px;margin:0 auto;padding:22px 26px 80px;display:grid;
+    grid-template-columns:1.55fr .95fr;gap:34px}
+  @media(max-width:880px){main{grid-template-columns:1fr}}
+  /* Grid items default to min-content width; let them shrink instead. */
+  main > div{min-width:0}
+  .stall > *{min-width:0}
+
+  section{margin-bottom:30px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);
+    margin:0 0 12px;font-weight:600;border-bottom:1px solid var(--rule);padding-bottom:7px}
+
+  /* merchant ledger rows, not cards */
+  .stall{display:grid;grid-template-columns:112px 1fr;gap:14px;padding:14px 0;
+    border-bottom:1px solid var(--rule)}
+  .stall:last-child{border-bottom:0}
+  .who .nm{font-size:19px;letter-spacing:-.01em}
+  .who .sp{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .who .acct{font-family:var(--mono);font-size:10.5px;color:var(--muted);word-break:break-all}
+  .figs{display:flex;gap:22px;flex-wrap:wrap;align-items:baseline}
+  .fig{min-width:64px}
+  .fig .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+  .fig .v{font-size:19px}
+  .state{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:2px;text-transform:uppercase;letter-spacing:.06em}
+  .state.open{background:rgba(63,107,58,.14);color:var(--green);border:1px solid rgba(63,107,58,.4)}
+  .state.closed{background:rgba(161,51,42,.12);color:var(--red);border:1px solid rgba(161,51,42,.4)}
+  .state.insolvent{background:rgba(122,90,18,.14);color:var(--gold);border:1px solid rgba(122,90,18,.4)}
+  .why{font-size:12.5px;color:var(--ink2);font-style:italic;margin-top:5px}
+
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  button{font-family:var(--serif);font-size:13.5px;background:var(--paper2);
+    border:1px solid var(--ink);border-radius:3px;padding:6px 11px;cursor:pointer;color:var(--ink);
+    transition:background .12s,transform .06s}
+  button:hover{background:#e2d8c4}
+  button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2.5px solid var(--copper);outline-offset:2px}
+  button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  button.primary:hover{background:#332d26}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  input[type=number],select{font-family:var(--mono);font-size:13px;background:#fff;
+    border:1px solid var(--rule);border-radius:3px;padding:5px 7px;width:66px}
+
+  .purse{border:1.5px solid var(--ink);border-radius:4px;padding:16px 18px;background:var(--paper2)}
+  .purse .row{display:flex;justify-content:space-between;align-items:baseline;margin:5px 0}
+  .purse .big{font-family:var(--mono);font-size:34px;letter-spacing:-.02em}
+  .purse .cap{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .inv{font-family:var(--mono);font-size:13px;color:var(--ink2)}
+  .inv span{display:inline-block;min-width:74px}
+
+  /* the ledger: the memorable thing — every event is a clickable NEAR tx */
+  .log{max-height:340px;overflow:auto;border-top:1px solid var(--rule)}
+  .ev{display:grid;grid-template-columns:38px 1fr;gap:10px;padding:8px 2px;border-bottom:1px solid var(--rule);font-size:13.5px}
+  .ev .day{font-family:var(--mono);color:var(--muted);font-size:12px;padding-top:2px}
+  .ev .kind{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--copper)}
+  .ev .tx{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+  .ev .tx a{color:var(--muted)}
+  .muted{color:var(--muted)}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:var(--ink);
+    color:var(--paper);padding:11px 18px;border-radius:4px;font-size:13.5px;max-width:88vw;
+    opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+  .toast.show{opacity:1}
+  .toast.err{background:var(--red)}
+  footer{max-width:1180px;margin:0 auto;padding:0 26px 40px;color:var(--muted);font-size:12.5px}
+  .live{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(63,107,58,.6);animation:p 2.4s infinite}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(63,107,58,.5)}70%{box-shadow:0 0 0 7px rgba(63,107,58,0)}100%{box-shadow:0 0 0 0 rgba(63,107,58,0)}}
+  @media (prefers-reduced-motion:reduce){.dot{animation:none}}
+
+  /* Narrow phones: reflow, larger touch targets, no horizontal scroll. */
+  @media (max-width:520px){
+    header{padding:14px 16px 12px;gap:12px}
+    main{padding:16px 16px 60px;gap:22px}
+    .brand h1{font-size:25px}
+    .brand .sub{font-size:12.5px}
+    .daybar{gap:12px}
+    .daybar .d{font-size:31px}
+    .stall{grid-template-columns:minmax(0,1fr);gap:8px;padding:12px 0}
+    .who{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+    .who .acct{width:100%}
+    .figs{gap:14px 20px}
+    .inv span{min-width:0;margin-right:14px}
+    button{min-height:44px;padding:9px 13px}
+    input[type=number],select{min-height:44px}
+    .purse .big{font-size:30px}
+  }
+  /* Touch devices at any width (e.g. tablets): comfortable tap targets. */
+  @media (pointer:coarse){
+    button{min-height:44px;padding:9px 13px}
+    input[type=number],select{min-height:44px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Ledgertown</h1>
+    <div class="sub">A market town run by AI merchants — four shops, four goods, one
+      deterministic economy. Every figure below is on NEAR testnet.</div>
+  </div>
+  <div class="daybar">
+    <div>
+      <div class="lbl">Market day</div>
+      <div class="d num" id="day">—</div>
+    </div>
+    <div>
+      <div class="lbl">Contract</div>
+      <div class="num" id="contract" style="font-size:12px">—</div>
+    </div>
+    <button class="primary" id="advance">Advance one day ▸</button>
+    <span class="live"><span class="dot"></span><span class="muted" style="font-size:12px">live RPC</span></span>
+  </div>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2>The four stalls</h2>
+      <div id="stalls"></div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>Your purse</h2>
+      <div class="purse">
+        <div class="row"><span class="cap">Credits</span><span class="big num" id="pcash">—</span></div>
+        <div class="row"><span class="cap">Deposited</span><span class="num" id="pdep">—</span></div>
+        <div class="cap" style="margin-top:10px">Cargo</div>
+        <div class="inv" id="pinv"><span class="muted">empty</span></div>
+        <div class="actions">
+          <input type="number" id="depamt" value="1" min="0.1" step="0.1" />
+          <button id="deposit">Deposit NEAR → credits</button>
+        </div>
+        <div class="actions">
+          <span class="cap" style="align-self:center">Gather</span>
+          <button data-gather="grain">grain</button>
+          <button data-gather="iron">iron</button>
+          <button data-gather="cloth">cloth</button>
+          <button data-gather="ale">ale</button>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Your transactions</h2>
+      <div class="log" id="mine"></div>
+      <p class="muted" style="font-size:12px;margin-top:8px">Every action you take signs a real
+        transaction on <span class="num">town.ledgertown.testnet</span>. Click a hash to open it
+        in the explorer.</p>
+    </section>
+
+    <section>
+      <h2>Town ledger</h2>
+      <div class="log" id="log"></div>
+      <p class="muted" style="font-size:12px;margin-top:8px">Economic events the contract
+        recorded on-chain — including the smith's closure and revival.</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  Deterministic engine · exact rational arithmetic on i128 · 30-day on-chain parity with the
+  reference simulation. Testnet only — credits are not money.
+</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const EXPLORER = "https://testnet.nearblocks.io/txns/";
+let state = null;
+
+function toast(msg, err){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = "toast show" + (err ? " err" : "");
+  clearTimeout(t._h); t._h = setTimeout(()=>{ t.className="toast"; }, 4200);
+}
+function money(n){ return (n??0).toLocaleString(); }
+
+async function api(method, path, body){
+  const r = await fetch(path, {
+    method, headers: {"Content-Type":"application/json"},
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const j = await r.json().catch(()=>({ok:false,error:"bad response"}));
+  if(!j.ok) throw new Error(j.error || "request failed");
+  return j;
+}
+
+function renderStalls(){
+  const el = document.getElementById("stalls");
+  el.innerHTML = "";
+  for(const m of state.merchants){
+    const good = m.specialty;
+    const inv = m.inventory?.[good] ?? 0;
+    const list = m.list_price?.[good];
+    const bid = m.bid_price?.[good];
+    const stall = document.createElement("div");
+    stall.className = "stall";
+    stall.innerHTML = `
+      <div class="who">
+        <div class="nm">${m.name}</div>
+        <div class="sp">${good}</div>
+        <div class="acct">${m.account}</div>
+      </div>
+      <div>
+        <div class="figs">
+          <div class="fig"><div class="k">Cash</div><div class="v num">${money(m.cash)}</div></div>
+          <div class="fig"><div class="k">Stock</div><div class="v num">${inv}</div></div>
+          <div class="fig"><div class="k">Sells at</div><div class="v num">${list==null?"—":list}</div></div>
+          <div class="fig"><div class="k">Buys at</div><div class="v num">${bid==null?"—":bid}</div></div>
+          <div class="fig"><div class="k">State</div><div class="v"><span class="state ${m.state}">${m.state}</span></div></div>
+        </div>
+        <div class="why">${m.last_decision ? "Last decision: " + m.last_decision : "No agent decision yet."}</div>
+        <div class="actions">
+          <span class="cap" style="align-self:center">units</span>
+          <input type="number" value="1" min="1" id="u-${m.id}" />
+          <button data-buy="${m.id}">Buy ${good}</button>
+          <button data-sell="${m.id}">Sell ${good}</button>
+          <button data-invest="${m.id}">Invest 50</button>
+        </div>
+      </div>`;
+    el.appendChild(stall);
+  }
+}
+
+function renderPurse(){
+  document.getElementById("pcash").textContent = money(state.player.cash);
+  document.getElementById("pdep").textContent = (state.player.deposited_yocto/1e24).toFixed(3) + " NEAR";
+  const inv = state.player.inventory || {};
+  const keys = Object.keys(inv).filter(k=>inv[k]>0);
+  document.getElementById("pinv").innerHTML = keys.length
+    ? keys.map(k=>`<span>${k}: ${inv[k]}</span>`).join("")
+    : '<span class="muted">empty</span>';
+}
+
+function renderLog(){
+  const el = document.getElementById("log");
+  const evs = [...(state.events||[])].reverse();
+  el.innerHTML = evs.length ? "" : '<div class="ev"><div class="day">—</div><div class="muted">No events yet.</div></div>';
+  for(const e of evs){
+    const div = document.createElement("div");
+    div.className = "ev";
+    div.innerHTML = `
+      <div class="day num">d${e.day}</div>
+      <div>
+        <div><span class="kind">${e.kind}</span> · ${e.merchant} · <span class="num">${e.value}</span></div>
+        <div class="muted">${e.note||""}</div>
+      </div>`;
+    el.appendChild(div);
+  }
+}
+
+function renderMine(){
+  const el = document.getElementById("mine");
+  const txs = state.recentTxs || [];
+  el.innerHTML = txs.length ? "" : '<div class="ev"><div class="day">—</div><div class="muted">No transactions yet — take an action above.</div></div>';
+  for(const t of txs){
+    const div = document.createElement("div");
+    div.className = "ev";
+    div.innerHTML = `
+      <div class="day num">${new Date(t.at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</div>
+      <div>
+        <div><span class="kind">${t.label}</span></div>
+        <div class="tx">tx <a target="_blank" rel="noopener" href="${EXPLORER}${t.hash}">${t.hash}</a></div>
+      </div>`;
+    el.appendChild(div);
+  }
+}
+
+async function refresh(){
+  try{
+    state = await api("GET","/api/state");
+    document.getElementById("day").textContent = state.day;
+    document.getElementById("contract").textContent = state.contract;
+    renderStalls(); renderPurse(); renderLog(); renderMine();
+  }catch(e){ toast("State error: "+e.message, true); }
+}
+
+function busy(on){ document.querySelectorAll("button").forEach(b=>b.disabled=on); }
+
+async function act(label, path, body){
+  busy(true);
+  try{
+    const r = await api("POST", path, body);
+    toast(`${label} — tx ${r.hash.slice(0,14)}…`);
+    await refresh();
+  }catch(e){ toast(`${label} refused: ${e.message}`, true); }
+  finally{ busy(false); }
+}
+
+document.addEventListener("click", async (ev)=>{
+  const b = ev.target.closest("button"); if(!b) return;
+  if(b.id==="advance") return act("Day advanced","/api/tick",{});
+  if(b.id==="deposit"){
+    const near = document.getElementById("depamt").value;
+    return act(`Deposited ${near} NEAR`,"/api/deposit",{near});
+  }
+  if(b.dataset.gather) return act(`Gathered ${b.dataset.gather}`,"/api/gather",{good:b.dataset.gather,units:5});
+  if(b.dataset.buy){
+    const id=b.dataset.buy, units=Number(document.getElementById("u-"+id).value)||1;
+    const m=state.merchants.find(x=>x.id===id);
+    return act(`Bought ${units} ${m.specialty} from ${m.name}`,"/api/buy",{merchant:id,good:m.specialty,units});
+  }
+  if(b.dataset.sell){
+    const id=b.dataset.sell, units=Number(document.getElementById("u-"+id).value)||1;
+    const m=state.merchants.find(x=>x.id===id);
+    return act(`Sold ${units} ${m.specialty} to ${m.name}`,"/api/sell",{merchant:id,good:m.specialty,units});
+  }
+  if(b.dataset.invest){
+    const id=b.dataset.invest;
+    return act(`Invested 50 in ${id}`,"/api/invest",{merchant:id,amount:50});
+  }
+});
+
+refresh();
+setInterval(refresh, 6000);
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+scenario,hash,survivors,of,closures,reopens,lifelines,final_cash,lost_demand,iron_price_span,grain_price_span
+01_baseline,5a04763d99e19eba,4,4,0,0,0,4064,0,20..21,12..12
+02_low_demand,fc579da88f360632,4,4,0,0,0,1256,2,20..22,12..15
+03_excess_demand,bc27a833766e86ec,4,4,0,0,0,6941,882,20..21,12..12
+04_shortage,ceab30205f89e5d0,4,4,0,0,0,4450,44,21..26,12..15
+05_price_war,8e98cd700948a415,2,3,1,0,0,1580,1031,20..21,12..13
+06_overspend,8ad13f2ddc73036b,2,3,1,0,1,1634,745,20..34,12..12
+07_insolvency,78d1ff2be85868f7,3,4,1,0,0,2905,77,20..34,12..12
+08_invest_recovery,26753d2cece77daf,4,4,1,1,0,2966,68,20..34,12..12
+09_demo_flood,0209c047ac251c16,4,4,1,1,0,3536,67,13..21,12..12
+10_cost_shock,034bd9cda6b8a6a3,3,4,1,0,0,2924,333,20..34,12..12
+11_stress,31d7cc20205f6876,6,6,0,0,0,780,660,20..22,12..13

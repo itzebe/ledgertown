@@ -1,0 +1,612 @@
+{
+  "contract": "town.ledgertown.testnet",
+  "steps": [
+    {
+      "label": "reset",
+      "hash": "BfEUthyS81nuZkAXz8Ydpb1sPyoHaZERm3Fsp1AiDVzS"
+    },
+    {
+      "label": "set_lifeline(false)",
+      "hash": "ER7ZaJt2E28TVKLxiKKi4TrBYh899mDNooBStaPYdXau"
+    },
+    {
+      "label": "fund player 5.004 NEAR from owner",
+      "hash": "EF1GeyrBR2fRBVRfsNHVmxFQ1w4UUPrRDmsuoWi98SoX"
+    },
+    {
+      "label": "player_deposit(5 NEAR)",
+      "hash": "C1ftyg5KcbGEpWLnuSpKLdnxcgE2vfVtoJgaX3hKCt1u"
+    },
+    {
+      "label": "tick (day 1)",
+      "hash": "GQh1fYJT9ZnXnn45XzPKSfD1HRz3D79hNa9kF9Evf6vq"
+    },
+    {
+      "label": "tick (day 15)",
+      "hash": "2T9eqX2kaKy4tN8q598FmRMGnxVJJv3tyZUqQarcoWxy"
+    },
+    {
+      "label": "add_shock iron demand x0.15 (18-28)",
+      "hash": "D3sZXSmgfVcjbv4dtTUcFfDiX7tqvkZgDtz3YTo5PBHY"
+    },
+    {
+      "label": "day 16: gather+sell+tick",
+      "hash": "A7NnwyoSnXqFEH4ZahjQaCAeVWt1FTc1vnFE1C8QCNoh",
+      "note": "sell J9x7JJnj"
+    },
+    {
+      "label": "day 20: gather (smith refused)+tick",
+      "hash": "BGkmbWiir3uHdeNjaT28dkiq9opXkVnSFSdR1iS3Ey6t",
+      "note": "refusals so far: 2"
+    },
+    {
+      "label": "day 22: gather (smith refused)+tick",
+      "hash": "Fa85PSVsk8m2Awk2wMU1jsqRAjM5xv7tuTRcUd2qXKnf",
+      "note": "refusals so far: 4"
+    },
+    {
+      "label": "tick to day 31 (shock over)",
+      "hash": "84Hxn55yzP6brfWcSZo6YSRFFhgLmSVQdVu24vcmrphu"
+    },
+    {
+      "label": "observe",
+      "hash": null,
+      "note": "smith=closed"
+    },
+    {
+      "label": "player_invest(smith,200)",
+      "hash": "HCziEXVtQ1g6Kv52ALf6M6ZPvdLUd38FNt1G7CtNjR79"
+    },
+    {
+      "label": "recovery tick (day 32)",
+      "hash": "63TFidvHvTHAomX7JDhv96uHCGEgfQRT3qpPY23WRwVc"
+    },
+    {
+      "label": "recovery tick (day 51)",
+      "hash": "8m5C1c87j9PJkBo5azgYLZ7wPQUbgoy5pGpZVFP5Zzoz"
+    }
+  ],
+  "txs": [
+    {
+      "label": "reset",
+      "hash": "BfEUthyS81nuZkAXz8Ydpb1sPyoHaZERm3Fsp1AiDVzS"
+    },
+    {
+      "label": "set_lifeline(false)",
+      "hash": "ER7ZaJt2E28TVKLxiKKi4TrBYh899mDNooBStaPYdXau"
+    },
+    {
+      "label": "fund player 5.004 NEAR from owner",
+      "hash": "EF1GeyrBR2fRBVRfsNHVmxFQ1w4UUPrRDmsuoWi98SoX"
+    },
+    {
+      "label": "player_deposit(5 NEAR)",
+      "hash": "C1ftyg5KcbGEpWLnuSpKLdnxcgE2vfVtoJgaX3hKCt1u"
+    },
+    {
+      "label": "tick (day 1)",
+      "hash": "GQh1fYJT9ZnXnn45XzPKSfD1HRz3D79hNa9kF9Evf6vq"
+    },
+    {
+      "label": "tick (day 15)",
+      "hash": "2T9eqX2kaKy4tN8q598FmRMGnxVJJv3tyZUqQarcoWxy"
+    },
+    {
+      "label": "add_shock iron demand x0.15 (18-28)",
+      "hash": "D3sZXSmgfVcjbv4dtTUcFfDiX7tqvkZgDtz3YTo5PBHY"
+    },
+    {
+      "label": "day 16: gather+sell+tick",
+      "hash": "A7NnwyoSnXqFEH4ZahjQaCAeVWt1FTc1vnFE1C8QCNoh"
+    },
+    {
+      "label": "day 20: gather (smith refused)+tick",
+      "hash": "BGkmbWiir3uHdeNjaT28dkiq9opXkVnSFSdR1iS3Ey6t"
+    },
+    {
+      "label": "day 22: gather (smith refused)+tick",
+      "hash": "Fa85PSVsk8m2Awk2wMU1jsqRAjM5xv7tuTRcUd2qXKnf"
+    },
+    {
+      "label": "tick to day 31 (shock over)",
+      "hash": "84Hxn55yzP6brfWcSZo6YSRFFhgLmSVQdVu24vcmrphu"
+    },
+    {
+      "label": "player_invest(smith,200)",
+      "hash": "HCziEXVtQ1g6Kv52ALf6M6ZPvdLUd38FNt1G7CtNjR79"
+    },
+    {
+      "label": "recovery tick (day 32)",
+      "hash": "63TFidvHvTHAomX7JDhv96uHCGEgfQRT3qpPY23WRwVc"
+    },
+    {
+      "label": "recovery tick (day 51)",
+      "hash": "8m5C1c87j9PJkBo5azgYLZ7wPQUbgoy5pGpZVFP5Zzoz"
+    }
+  ],
+  "snapshots": [
+    {
+      "label": "start",
+      "day": 0,
+      "player_cash": 0,
+      "merchants": [
+        {
+          "id": "brewer",
+          "cash": 300,
+          "inv": 20,
+          "list": null,
+          "bid": null,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "miller",
+          "cash": 300,
+          "inv": 20,
+          "list": null,
+          "bid": null,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "smith",
+          "cash": 300,
+          "inv": 20,
+          "list": null,
+          "bid": null,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "weaver",
+          "cash": 300,
+          "inv": 20,
+          "list": null,
+          "bid": null,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        }
+      ]
+    },
+    {
+      "label": "after-deposit",
+      "day": 0,
+      "player_cash": 5000,
+      "merchants": [
+        {
+          "id": "brewer",
+          "cash": 300,
+          "inv": 20,
+          "list": null,
+          "bid": null,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "miller",
+          "cash": 300,
+          "inv": 20,
+          "list": null,
+          "bid": null,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "smith",
+          "cash": 300,
+          "inv": 20,
+          "list": null,
+          "bid": null,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "weaver",
+          "cash": 300,
+          "inv": 20,
+          "list": null,
+          "bid": null,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        }
+      ]
+    },
+    {
+      "label": "healthy",
+      "day": 15,
+      "player_cash": 5000,
+      "merchants": [
+        {
+          "id": "brewer",
+          "cash": 528,
+          "inv": 11,
+          "list": 15,
+          "bid": 11,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "miller",
+          "cash": 445,
+          "inv": 16,
+          "list": 12,
+          "bid": 8,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "smith",
+          "cash": 643,
+          "inv": 9,
+          "list": 21,
+          "bid": 15,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "weaver",
+          "cash": 783,
+          "inv": 6,
+          "list": 33,
+          "bid": 23,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        }
+      ]
+    },
+    {
+      "label": "after-flood",
+      "day": 22,
+      "player_cash": 5769,
+      "merchants": [
+        {
+          "id": "brewer",
+          "cash": 584,
+          "inv": 11,
+          "list": 15,
+          "bid": 11,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "miller",
+          "cash": 494,
+          "inv": 16,
+          "list": 12,
+          "bid": 8,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "smith",
+          "cash": -2,
+          "inv": 52,
+          "list": 13,
+          "bid": 9,
+          "state": "closed",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "weaver",
+          "cash": 860,
+          "inv": 6,
+          "list": 33,
+          "bid": 23,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        }
+      ]
+    },
+    {
+      "label": "shock-over",
+      "day": 31,
+      "player_cash": 5769,
+      "merchants": [
+        {
+          "id": "brewer",
+          "cash": 656,
+          "inv": 11,
+          "list": 15,
+          "bid": 11,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "miller",
+          "cash": 557,
+          "inv": 16,
+          "list": 12,
+          "bid": 8,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "smith",
+          "cash": -2,
+          "inv": 52,
+          "list": null,
+          "bid": null,
+          "state": "closed",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "weaver",
+          "cash": 959,
+          "inv": 6,
+          "list": 33,
+          "bid": 23,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        }
+      ]
+    },
+    {
+      "label": "after-invest",
+      "day": 31,
+      "player_cash": 5569,
+      "merchants": [
+        {
+          "id": "brewer",
+          "cash": 656,
+          "inv": 11,
+          "list": 15,
+          "bid": 11,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "miller",
+          "cash": 557,
+          "inv": 16,
+          "list": 12,
+          "bid": 8,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "smith",
+          "cash": 198,
+          "inv": 52,
+          "list": null,
+          "bid": null,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "weaver",
+          "cash": 959,
+          "inv": 6,
+          "list": 33,
+          "bid": 23,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        }
+      ]
+    },
+    {
+      "label": "final",
+      "day": 51,
+      "player_cash": 5569,
+      "merchants": [
+        {
+          "id": "brewer",
+          "cash": 816,
+          "inv": 11,
+          "list": 15,
+          "bid": 11,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "miller",
+          "cash": 697,
+          "inv": 16,
+          "list": 12,
+          "bid": 8,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "smith",
+          "cash": 744,
+          "inv": 9,
+          "list": 21,
+          "bid": 15,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        },
+        {
+          "id": "weaver",
+          "cash": 1179,
+          "inv": 6,
+          "list": 33,
+          "bid": 23,
+          "state": "open",
+          "markup_bp": 2200,
+          "last": ""
+        }
+      ]
+    }
+  ],
+  "verdict": "PASS",
+  "final": {
+    "label": "final",
+    "day": 51,
+    "player_cash": 5569,
+    "merchants": [
+      {
+        "id": "brewer",
+        "cash": 816,
+        "inv": 11,
+        "list": 15,
+        "bid": 11,
+        "state": "open",
+        "markup_bp": 2200,
+        "last": ""
+      },
+      {
+        "id": "miller",
+        "cash": 697,
+        "inv": 16,
+        "list": 12,
+        "bid": 8,
+        "state": "open",
+        "markup_bp": 2200,
+        "last": ""
+      },
+      {
+        "id": "smith",
+        "cash": 744,
+        "inv": 9,
+        "list": 21,
+        "bid": 15,
+        "state": "open",
+        "markup_bp": 2200,
+        "last": ""
+      },
+      {
+        "id": "weaver",
+        "cash": 1179,
+        "inv": 6,
+        "list": 33,
+        "bid": 23,
+        "state": "open",
+        "markup_bp": 2200,
+        "last": ""
+      }
+    ]
+  },
+  "events": [
+    {
+      "id": 0,
+      "day": 0,
+      "merchant": "player",
+      "kind": "DEPOSIT",
+      "value": 5000,
+      "note": "player deposited NEAR for credits"
+    },
+    {
+      "id": 1,
+      "day": 15,
+      "merchant": "player",
+      "kind": "GATHER",
+      "value": 25,
+      "note": "gathered iron"
+    },
+    {
+      "id": 2,
+      "day": 15,
+      "merchant": "smith",
+      "kind": "PLAYER_SELL",
+      "value": 375,
+      "note": "player sold 25 iron at bid 15"
+    },
+    {
+      "id": 3,
+      "day": 16,
+      "merchant": "player",
+      "kind": "GATHER",
+      "value": 25,
+      "note": "gathered iron"
+    },
+    {
+      "id": 4,
+      "day": 16,
+      "merchant": "smith",
+      "kind": "PLAYER_SELL",
+      "value": 250,
+      "note": "player sold 25 iron at bid 10"
+    },
+    {
+      "id": 5,
+      "day": 17,
+      "merchant": "player",
+      "kind": "GATHER",
+      "value": 25,
+      "note": "gathered iron"
+    },
+    {
+      "id": 6,
+      "day": 17,
+      "merchant": "smith",
+      "kind": "PLAYER_SELL",
+      "value": 144,
+      "note": "player sold 16 iron at bid 9"
+    },
+    {
+      "id": 7,
+      "day": 18,
+      "merchant": "player",
+      "kind": "GATHER",
+      "value": 25,
+      "note": "gathered iron"
+    },
+    {
+      "id": 8,
+      "day": 19,
+      "merchant": "player",
+      "kind": "GATHER",
+      "value": 25,
+      "note": "gathered iron"
+    },
+    {
+      "id": 9,
+      "day": 20,
+      "merchant": "player",
+      "kind": "GATHER",
+      "value": 25,
+      "note": "gathered iron"
+    },
+    {
+      "id": 10,
+      "day": 21,
+      "merchant": "player",
+      "kind": "GATHER",
+      "value": 25,
+      "note": "gathered iron"
+    },
+    {
+      "id": 11,
+      "day": 22,
+      "merchant": "smith",
+      "kind": "CLOSED",
+      "value": -2,
+      "note": "insolvent"
+    },
+    {
+      "id": 12,
+      "day": 31,
+      "merchant": "smith",
+      "kind": "REOPENED",
+      "value": 198,
+      "note": "investor funded revival"
+    }
+  ]
+}
