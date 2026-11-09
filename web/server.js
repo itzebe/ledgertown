@@ -36,8 +36,8 @@ const near = await connectTown();
 // A short in-memory trail of the player's own transactions, so the UI can link
 // each action straight to the explorer. Purely presentational.
 const recentTxs = [];
-function remember(label, hash) {
-  recentTxs.unshift({ label, hash, at: Date.now() });
+function remember(label, hash, merchant) {
+  recentTxs.unshift({ label, hash, merchant: merchant || null, at: Date.now() });
   if (recentTxs.length > 25) recentTxs.pop();
 }
 
@@ -124,7 +124,7 @@ const server = http.createServer(async (req, res) => {
     if (routes[key]) {
       const body = req.method === "POST" ? await readBody(req) : {};
       const out = await routes[key](body);
-      if (out.hash) remember(url.pathname.replace("/api/", ""), out.hash);
+      if (out.hash) remember(url.pathname.replace("/api/", ""), out.hash, body.merchant);
       return json(res, 200, { ok: true, ...out });
     }
     // static

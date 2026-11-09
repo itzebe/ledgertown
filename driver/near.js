@@ -15,13 +15,20 @@ export const WASM = path.join(
   "ledgertown.wasm"
 );
 export const CONTRACT_ID = process.env.LEDGERTOWN_CONTRACT || "town.ledgertown.testnet";
-/** Free public testnet RPCs, tried in order. Override the first with
+/** Free public *testnet* RPCs, tried in order. Override the first with
  *  `LEDGERTOWN_RPC`; each has its own rate limit, so failover keeps the demo
- *  and the UI responsive without any paid plan. */
+ *  and the UI responsive without any paid plan.
+ *
+ *  These MUST be testnet endpoints. `free.rpc.fastnear.com` was previously used
+ *  here but now serves MAINNET; sending a testnet-signed transaction to it fails,
+ *  and a mixed-endpoint failover pool is unsafe. `connectTown` additionally
+ *  verifies that **every** endpoint in the pool reports `chain_id: testnet` and
+ *  refuses to run otherwise. */
 export const RPC_ENDPOINTS = [
   process.env.LEDGERTOWN_RPC,
-  "https://free.rpc.fastnear.com",
+  "https://rpc.testnet.fastnear.com",
   "https://near-testnet.drpc.org",
+  "https://rpc.testnet.near.org",
 ].filter(Boolean);
 export const RPC = RPC_ENDPOINTS[0];
 
@@ -57,7 +64,76 @@ export async function connectTown() {
       RPC_ENDPOINTS.map((url) => new providers.JsonRpcProvider({ url }))
     );
   }
+  // Validate the WHOLE pool, not just the first responder: with failover, any
+  // pool member can serve a later read.
+  await assertEndpointsTestnet(RPC_ENDPOINTS);
+  await assertTestnet(near);
   return near;
+}
+
+/** Pure: is this a testnet chain id? Exported so the guard is unit-testable
+ *  offline (no network), matching the `executionFailure` pattern. */
+export function isTestnetChain(chainId) {
+  return chainId === "testnet";
+}
+
+/** Pure: from probed endpoints (`{url, chainId}` or `{url, error}`), return the
+ *  reachable ones that answered a non-testnet chain. Unreachable endpoints are
+ *  ignored — failover exists for them — and the connect will fail later anyway. */
+export function nonTestnetEndpoints(probes) {
+  return probes.filter((p) => !p.error && !isTestnetChain(p.chainId));
+}
+
+/** Pure: throw a clear, actionable error if `chainId` is not testnet. */
+export function assertTestnetChain(chainId) {
+  if (!isTestnetChain(chainId)) {
+    throw new Error(
+      `refusing to run: RPC endpoint reports chain_id "${chainId}", expected "testnet". ` +
+        `Set LEDGERTOWN_RPC to a testnet endpoint (e.g. https://rpc.testnet.fastnear.com).`
+    );
+  }
+  return chainId;
+}
+
+/** Probe every endpoint in the failover pool and refuse to run if any reachable
+ *  member reports a non-testnet chain.
+ *
+ *  Checking only the first responder is not enough: `FailoverRpcProvider` rotates
+ *  through the pool, so a host that silently flipped to mainnet (as
+ *  `free.rpc.fastnear.com` did) could serve a later read from the wrong chain.
+ *  `networkId` in the connect() config does not enforce this. */
+export async function assertEndpointsTestnet(urls) {
+  const probes = await Promise.all(
+    urls.map(async (url) => {
+      try {
+        const status = await new providers.JsonRpcProvider({ url }).status();
+        return { url, chainId: status?.chain_id ?? status?.chainId };
+      } catch (e) {
+        return { url, error: String(e?.message || e) };
+      }
+    })
+  );
+  const bad = nonTestnetEndpoints(probes);
+  if (bad.length) {
+    throw new Error(
+      `refusing to run: RPC endpoint(s) report a non-testnet chain: ` +
+        bad.map((b) => `${b.url} -> ${b.chainId}`).join(", ") +
+        `. Remove them from LEDGERTOWN_RPC / RPC_ENDPOINTS.`
+    );
+  }
+  return probes;
+}
+
+/** Fail fast if the resolved RPC is not testnet.
+ *
+ *  Public RPC hostnames have silently switched networks before
+ *  (`free.rpc.fastnear.com` now serves mainnet). A testnet-signed transaction
+ *  sent to a mainnet endpoint is rejected. This checks the live provider's
+ *  first responder; `assertEndpointsTestnet` covers the rest of the pool.
+ *  Refuse to run rather than mislead. */
+export async function assertTestnet(near) {
+  const status = await near.connection.provider.status();
+  return assertTestnetChain(status?.chain_id ?? status?.chainId);
 }
 
 export function nearToYocto(near) {
