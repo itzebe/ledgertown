@@ -24,8 +24,9 @@ docs/           hackathon research + economy notes
 
 > **Network guard.** Public RPC hostnames have silently changed networks before —
 > `free.rpc.fastnear.com` now serves **mainnet**, not testnet. The driver therefore
-> only lists known testnet endpoints and `connectTown` verifies the endpoint reports
-> `chain_id: testnet`, refusing to run otherwise (see `tests/chain-guard.test.js`).
+> only lists known testnet endpoints, and `connectTown` probes **every** endpoint in
+> the failover pool (not just the first responder) and refuses to run if any reachable
+> member reports a non-testnet `chain_id` (see `tests/chain-guard.test.js`).
 > Override with `LEDGERTOWN_RPC` if you use your own testnet node.
 
 ---
@@ -171,7 +172,7 @@ Offline (no network, no account required):
 
 ```bash
 npm run test:contract     # 11 tests incl. exact 30-day parity vs the reference
-npm run test:agent        # 15 unit tests: merchant policy + failure detection + chain guard
+npm run test:agent        # 17 unit tests: merchant policy + failure detection + chain guard
 python3 feasibility/tests.py       # 25 invariants / determinism tests
 python3 feasibility/exploits.py    # 39 adversarial exploit probes
 ```
@@ -190,7 +191,7 @@ node scripts/verify-parity.js   # 30 days on the deployed contract vs golden (12
 Verified on the live deployment (`town.ledgertown.testnet`, NEAR testnet):
 
 - Contract: `cargo test` — **11 passed**, including exact 30-day parity.
-- Unit tests: `node --test tests/*.test.js` — **15 passed** (8 policy + 4 failure-detection + 3 chain-guard).
+- Unit tests: `node --test tests/*.test.js` — **17 passed** (8 policy + 4 failure-detection + 5 chain-guard).
 - Reference model: `feasibility/tests.py` — **25/25 passed**; `feasibility/exploits.py`
   — **39/39 passed**.
 - Live parity: `scripts/verify-parity.js` — **PASS, 120 rows, 0 mismatches** against the
