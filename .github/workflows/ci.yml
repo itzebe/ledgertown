@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: App (node + contract + model)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install
+      - name: Offline unit tests (server guards, handler, clients, agent)
+        run: npm test
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Contract tests (incl. exact 30-day parity vs the reference)
+        run: cargo test --manifest-path contract/Cargo.toml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Reference model invariants
+        run: python3 feasibility/tests.py
+      - name: Adversarial exploit probes
+        run: python3 feasibility/exploits.py

@@ -74,6 +74,8 @@ driver/              Node.js clients that talk to the deployed contract
   town.js            town client (state, tick, deposit, gather, buy, sell, invest)
   agent.js           constrained AI merchant policy -> merchant_decide
   demo.js            full lifecycle demo (flood -> insolvency -> revival)
+api/                 Vercel serverless entry point (same handler as server.js)
+vercel.json          Vercel config: static UI + /api function + security headers
 web/                 public play server + interface
   server.js          process bootstrap; binds HOST/PORT, fails closed
   handler.js         HTTP routing, validation, rate limits, security headers
@@ -173,6 +175,19 @@ database is required — the app keeps no persistent local state.
 
 > **Never** put a mainnet key, an owner key, or a merchant key in any hosting
 > dashboard. Only a dedicated, low-balance testnet demo key belongs there.
+
+### Alternative public host: Vercel
+
+`api/[...path].js` + `vercel.json` run the same handler as a Vercel serverless
+function (read-only by default). Deploy with `vercel` (preview) or `vercel --prod`;
+set the same environment variables in the project settings. `outputDirectory: web`
+serves the static UI, `/api/*` is handled by the function, and `/healthz` is
+rewritten to it. **Verified:** the function answers `/api/health` (200) and
+`/api/state` with live day-51 state when driven locally. **Not verified end to
+end:** an actual Vercel publish — the account returned *"Your Team exceeded our
+fair use limits and has been blocked"* when `vercel dev` ran, so no Vercel
+deployment was created. Treat the Vercel path as ready-but-untested-on-Vercel;
+Render (above) is the verified host.
 
 ## Demo (one command)
 
