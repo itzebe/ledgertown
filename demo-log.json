@@ -3,50 +3,50 @@
   "steps": [
     {
       "label": "reset",
-      "hash": "BfEUthyS81nuZkAXz8Ydpb1sPyoHaZERm3Fsp1AiDVzS"
+      "hash": "Gp2ZsTmRztcoYqoBBGoNnrYckCJkYapoSKcsHRtfzohk"
     },
     {
       "label": "set_lifeline(false)",
-      "hash": "ER7ZaJt2E28TVKLxiKKi4TrBYh899mDNooBStaPYdXau"
+      "hash": "3bCsZ8Qyj949XyiJHkjusv6KTXvkLZ76RqSBRB7ifrrA"
     },
     {
       "label": "fund player 5.004 NEAR from owner",
-      "hash": "EF1GeyrBR2fRBVRfsNHVmxFQ1w4UUPrRDmsuoWi98SoX"
+      "hash": "HbPbtsSmQ9oka9RDmKswSyXFjkhH5L1x66hY5pCgqtkB"
     },
     {
       "label": "player_deposit(5 NEAR)",
-      "hash": "C1ftyg5KcbGEpWLnuSpKLdnxcgE2vfVtoJgaX3hKCt1u"
+      "hash": "Hndo2tVLWqWFAFJ2SF7DNZpxBpXdvx8xdianzYRJD65Y"
     },
     {
       "label": "tick (day 1)",
-      "hash": "GQh1fYJT9ZnXnn45XzPKSfD1HRz3D79hNa9kF9Evf6vq"
+      "hash": "3Q7y52xe34rqC46o76LxeQLEUFkamKo31oghAdXZcohJ"
     },
     {
       "label": "tick (day 15)",
-      "hash": "2T9eqX2kaKy4tN8q598FmRMGnxVJJv3tyZUqQarcoWxy"
+      "hash": "5JvQCn4Pjj8cxiB4hd81icLjQenRkiyavxSRktw2pVzY"
     },
     {
       "label": "add_shock iron demand x0.15 (18-28)",
-      "hash": "D3sZXSmgfVcjbv4dtTUcFfDiX7tqvkZgDtz3YTo5PBHY"
+      "hash": "GJs6iehYSjanwmqzjRtvoUK4hwwYyJTBpiCEkfquANvg"
     },
     {
       "label": "day 16: gather+sell+tick",
-      "hash": "A7NnwyoSnXqFEH4ZahjQaCAeVWt1FTc1vnFE1C8QCNoh",
-      "note": "sell J9x7JJnj"
+      "hash": "4XnC37b7zPtRU1dNvUZUMfbeSGjadxEjbdU75kSKqXq9",
+      "note": "sell 61ER8FrW"
     },
     {
       "label": "day 20: gather (smith refused)+tick",
-      "hash": "BGkmbWiir3uHdeNjaT28dkiq9opXkVnSFSdR1iS3Ey6t",
+      "hash": "vmrbveRhpYhuuSoWFej3SdVrRudXxLqoujxnsL9Ba9p",
       "note": "refusals so far: 2"
     },
     {
       "label": "day 22: gather (smith refused)+tick",
-      "hash": "Fa85PSVsk8m2Awk2wMU1jsqRAjM5xv7tuTRcUd2qXKnf",
+      "hash": "FDnw5DGBsqLEohD8b1kcUwBHkPaLjAND3KGJBPjgBFb6",
       "note": "refusals so far: 4"
     },
     {
       "label": "tick to day 31 (shock over)",
-      "hash": "84Hxn55yzP6brfWcSZo6YSRFFhgLmSVQdVu24vcmrphu"
+      "hash": "DdRm2ypsy8zsR4xfkL1w4Wo5wBU1YvevaUMz1GjAzAEi"
     },
     {
       "label": "observe",
@@ -55,73 +55,73 @@
     },
     {
       "label": "player_invest(smith,200)",
-      "hash": "HCziEXVtQ1g6Kv52ALf6M6ZPvdLUd38FNt1G7CtNjR79"
+      "hash": "G3mSM6Bmgd4pVtudmV6uCYWa3MAmbVsYZUQ1LWpz5UWk"
     },
     {
       "label": "recovery tick (day 32)",
-      "hash": "63TFidvHvTHAomX7JDhv96uHCGEgfQRT3qpPY23WRwVc"
+      "hash": "EbPobZQSfBsK8sT7ABa93JEuQGKEpPUFDemc3WZweUUm"
     },
     {
       "label": "recovery tick (day 51)",
-      "hash": "8m5C1c87j9PJkBo5azgYLZ7wPQUbgoy5pGpZVFP5Zzoz"
+      "hash": "2S8X5JfnaLiTuR1aEch1J9UKpVjbHTjjP2yZ1PxUbvL2"
     }
   ],
   "txs": [
     {
       "label": "reset",
-      "hash": "BfEUthyS81nuZkAXz8Ydpb1sPyoHaZERm3Fsp1AiDVzS"
+      "hash": "Gp2ZsTmRztcoYqoBBGoNnrYckCJkYapoSKcsHRtfzohk"
     },
     {
       "label": "set_lifeline(false)",
-      "hash": "ER7ZaJt2E28TVKLxiKKi4TrBYh899mDNooBStaPYdXau"
+      "hash": "3bCsZ8Qyj949XyiJHkjusv6KTXvkLZ76RqSBRB7ifrrA"
     },
     {
       "label": "fund player 5.004 NEAR from owner",
-      "hash": "EF1GeyrBR2fRBVRfsNHVmxFQ1w4UUPrRDmsuoWi98SoX"
+      "hash": "HbPbtsSmQ9oka9RDmKswSyXFjkhH5L1x66hY5pCgqtkB"
     },
     {
       "label": "player_deposit(5 NEAR)",
-      "hash": "C1ftyg5KcbGEpWLnuSpKLdnxcgE2vfVtoJgaX3hKCt1u"
+      "hash": "Hndo2tVLWqWFAFJ2SF7DNZpxBpXdvx8xdianzYRJD65Y"
     },
     {
       "label": "tick (day 1)",
-      "hash": "GQh1fYJT9ZnXnn45XzPKSfD1HRz3D79hNa9kF9Evf6vq"
+      "hash": "3Q7y52xe34rqC46o76LxeQLEUFkamKo31oghAdXZcohJ"
     },
     {
       "label": "tick (day 15)",
-      "hash": "2T9eqX2kaKy4tN8q598FmRMGnxVJJv3tyZUqQarcoWxy"
+      "hash": "5JvQCn4Pjj8cxiB4hd81icLjQenRkiyavxSRktw2pVzY"
     },
     {
       "label": "add_shock iron demand x0.15 (18-28)",
-      "hash": "D3sZXSmgfVcjbv4dtTUcFfDiX7tqvkZgDtz3YTo5PBHY"
+      "hash": "GJs6iehYSjanwmqzjRtvoUK4hwwYyJTBpiCEkfquANvg"
     },
     {
       "label": "day 16: gather+sell+tick",
-      "hash": "A7NnwyoSnXqFEH4ZahjQaCAeVWt1FTc1vnFE1C8QCNoh"
+      "hash": "4XnC37b7zPtRU1dNvUZUMfbeSGjadxEjbdU75kSKqXq9"
     },
     {
       "label": "day 20: gather (smith refused)+tick",
-      "hash": "BGkmbWiir3uHdeNjaT28dkiq9opXkVnSFSdR1iS3Ey6t"
+      "hash": "vmrbveRhpYhuuSoWFej3SdVrRudXxLqoujxnsL9Ba9p"
     },
     {
       "label": "day 22: gather (smith refused)+tick",
-      "hash": "Fa85PSVsk8m2Awk2wMU1jsqRAjM5xv7tuTRcUd2qXKnf"
+      "hash": "FDnw5DGBsqLEohD8b1kcUwBHkPaLjAND3KGJBPjgBFb6"
     },
     {
       "label": "tick to day 31 (shock over)",
-      "hash": "84Hxn55yzP6brfWcSZo6YSRFFhgLmSVQdVu24vcmrphu"
+      "hash": "DdRm2ypsy8zsR4xfkL1w4Wo5wBU1YvevaUMz1GjAzAEi"
     },
     {
       "label": "player_invest(smith,200)",
-      "hash": "HCziEXVtQ1g6Kv52ALf6M6ZPvdLUd38FNt1G7CtNjR79"
+      "hash": "G3mSM6Bmgd4pVtudmV6uCYWa3MAmbVsYZUQ1LWpz5UWk"
     },
     {
       "label": "recovery tick (day 32)",
-      "hash": "63TFidvHvTHAomX7JDhv96uHCGEgfQRT3qpPY23WRwVc"
+      "hash": "EbPobZQSfBsK8sT7ABa93JEuQGKEpPUFDemc3WZweUUm"
     },
     {
       "label": "recovery tick (day 51)",
-      "hash": "8m5C1c87j9PJkBo5azgYLZ7wPQUbgoy5pGpZVFP5Zzoz"
+      "hash": "2S8X5JfnaLiTuR1aEch1J9UKpVjbHTjjP2yZ1PxUbvL2"
     }
   ],
   "snapshots": [

@@ -52,7 +52,7 @@ function summarize(state) {
     bid: m.bid_price?.[m.specialty] ?? null,
     state: m.state,
     markup_bp: m.markup_bp,
-    reopened: m.reopened,
+    reopened: m.reopened_count,
     last: m.last_decision,
   }));
 }

@@ -15,13 +15,20 @@ export const WASM = path.join(
   "ledgertown.wasm"
 );
 export const CONTRACT_ID = process.env.LEDGERTOWN_CONTRACT || "town.ledgertown.testnet";
-/** Free public testnet RPCs, tried in order. Override the first with
+/** Free public *testnet* RPCs, tried in order. Override the first with
  *  `LEDGERTOWN_RPC`; each has its own rate limit, so failover keeps the demo
- *  and the UI responsive without any paid plan. */
+ *  and the UI responsive without any paid plan.
+ *
+ *  These MUST be testnet endpoints. `free.rpc.fastnear.com` was previously used
+ *  here but now serves MAINNET; sending a testnet-signed transaction to it fails,
+ *  and a mixed-endpoint failover pool is unsafe. `connectTown` additionally
+ *  verifies the resolved endpoint reports `chain_id: testnet` and refuses to run
+ *  otherwise. */
 export const RPC_ENDPOINTS = [
   process.env.LEDGERTOWN_RPC,
-  "https://free.rpc.fastnear.com",
+  "https://rpc.testnet.fastnear.com",
   "https://near-testnet.drpc.org",
+  "https://rpc.testnet.near.org",
 ].filter(Boolean);
 export const RPC = RPC_ENDPOINTS[0];
 
@@ -57,7 +64,37 @@ export async function connectTown() {
       RPC_ENDPOINTS.map((url) => new providers.JsonRpcProvider({ url }))
     );
   }
+  await assertTestnet(near);
   return near;
+}
+
+/** Pure: is this a testnet chain id? Exported so the guard is unit-testable
+ *  offline (no network), matching the `executionFailure` pattern. */
+export function isTestnetChain(chainId) {
+  return chainId === "testnet";
+}
+
+/** Pure: throw a clear, actionable error if `chainId` is not testnet. */
+export function assertTestnetChain(chainId) {
+  if (!isTestnetChain(chainId)) {
+    throw new Error(
+      `refusing to run: RPC endpoint reports chain_id "${chainId}", expected "testnet". ` +
+        `Set LEDGERTOWN_RPC to a testnet endpoint (e.g. https://rpc.testnet.fastnear.com).`
+    );
+  }
+  return chainId;
+}
+
+/** Fail fast if the resolved RPC is not testnet.
+ *
+ *  Public RPC hostnames have silently switched networks before
+ *  (`free.rpc.fastnear.com` now serves mainnet). A testnet-signed transaction
+ *  sent to a mainnet endpoint is rejected, and worse, a mainnet endpoint in a
+ *  failover pool could serve reads from the wrong chain. Refuse to run rather
+ *  than mislead. `networkId` in the connect() config does not guarantee this. */
+export async function assertTestnet(near) {
+  const status = await near.connection.provider.status();
+  return assertTestnetChain(status?.chain_id ?? status?.chainId);
 }
 
 export function nearToYocto(near) {
