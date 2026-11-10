@@ -8,5 +8,9 @@ demo-log.json
 contract/target/
 node_modules/
 docs/screenshots/
+shots/
 feasibility/results/
+.openhands/
+*.log
+*.out
 .git/

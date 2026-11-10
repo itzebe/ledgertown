@@ -11,34 +11,60 @@ import { createHandler } from "../web/handler.js";
 import { createReadOnlyTown, createPlayTown, TESTNET_ENDPOINTS } from "../web/town-client.js";
 import { parseAllowlist } from "../web/guard.js";
 
-let cached;
-
-async function buildHandler() {
-  const mode = process.env.LEDGERTOWN_MODE === "play" ? "play" : "read-only";
-  const endpoints = (
-    process.env.LEDGERTOWN_RPC ? process.env.LEDGERTOWN_RPC.split(",") : TESTNET_ENDPOINTS
-  )
+function endpointsFromEnv() {
+  return (process.env.LEDGERTOWN_RPC ? process.env.LEDGERTOWN_RPC.split(",") : TESTNET_ENDPOINTS)
     .map((s) => s.trim())
     .filter(Boolean);
-  const town =
-    mode === "play"
-      ? await createPlayTown({
-          accountId: process.env.LEDGERTOWN_DEMO_ACCOUNT,
-          secretKey: process.env.LEDGERTOWN_DEMO_KEY,
-          endpoints,
-        })
-      : await createReadOnlyTown({ endpoints });
-  const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "web");
+}
+
+/** Build the request handler. `town`/`config` may be injected so the entry can
+ *  be exercised without a network or keys (see tests/vercel-entry.test.js). */
+export async function buildHandler({ town, config } = {}) {
+  const mode = process.env.LEDGERTOWN_MODE === "play" ? "play" : "read-only";
+  if (!town) {
+    town =
+      mode === "play"
+        ? await createPlayTown({
+            accountId: process.env.LEDGERTOWN_DEMO_ACCOUNT,
+            secretKey: process.env.LEDGERTOWN_DEMO_KEY,
+            endpoints: endpointsFromEnv(),
+          })
+        : await createReadOnlyTown({ endpoints: endpointsFromEnv() });
+  }
   return createHandler({
     town,
-    config: { mode, originAllowlist: parseAllowlist(process.env.LEDGERTOWN_ALLOW_ORIGIN), webRoot },
+    config: config ?? {
+      mode,
+      originAllowlist: parseAllowlist(process.env.LEDGERTOWN_ALLOW_ORIGIN),
+      webRoot: path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "web"),
+    },
     log: (m) => console.error(m),
   });
 }
 
-// Vercel reuses the warm instance, so build the town once and share it.
+/** Cache the result of an async factory for the warm instance. A rejected build
+ *  is NOT cached: the next request retries, so a transient failure at cold start
+ *  (e.g. RPC briefly unreachable) does not wedge the instance until Vercel
+ *  recycles it. */
+export function memoizeOnce(factory) {
+  let cached;
+  return async function get() {
+    if (cached === undefined) {
+      cached = Promise.resolve()
+        .then(factory)
+        .catch((e) => {
+          cached = undefined;
+          throw e;
+        });
+    }
+    return cached;
+  };
+}
+
+// Vercel reuses the warm instance, so build the handler once and share it.
+const getHandler = memoizeOnce(() => buildHandler());
+
 export default async function handler(req, res) {
-  if (!cached) cached = buildHandler();
-  const h = await cached;
+  const h = await getHandler();
   return h(req, res);
 }

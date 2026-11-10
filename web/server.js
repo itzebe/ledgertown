@@ -9,7 +9,7 @@
 //   HOST=0.0.0.0 PORT=10000 node web/server.js
 //
 // Environment:
-//   PORT                     bind port (default 3000; Render sets this)
+//   PORT                     bind port (default 3000; the host may set this)
 //   HOST                     bind address (default 127.0.0.1)
 //   LEDGERTOWN_RPC           override the RPC pool (comma-separated)
 //   LEDGERTOWN_CONTRACT      contract account (default town.ledgertown.testnet)

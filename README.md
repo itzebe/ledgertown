@@ -94,8 +94,8 @@ feasibility/         reference economic model (pure Python, no network)
 scripts/fund.js      top up an account with free testnet NEAR
 scripts/verify-parity.js  live 30-day parity check vs golden_baseline.json
 scripts/layout-probe.js   responsive/overflow probe over the DevTools protocol
-tests/agent.test.js  unit tests for the pure merchant policy
-tests/outcome.test.js  unit tests for failed-execution detection (no fake success)
+tests/               node --test suites: guards, handler, town client, agent policy,
+                     failure detection, chain guard, and the Vercel entry point
 docs/                hackathon research + economy notes
 keys/                git-ignored; real testnet secret keys
 ```
@@ -155,39 +155,62 @@ must not exist in a public deployment.
 > giving each visitor an independent purse would require a contract change (a separate
 > testnet migration), which is out of scope here.
 
-### Public deployment (Render, free plan)
+### Public deployment (Vercel, free Hobby plan)
 
-`render.yaml` is a Render Blueprint for a free web service:
+The live public site is served by Vercel from this repository. The project is
+connected to the `main` branch, so every merge to `main` produces a production
+deployment; pull requests produce preview deployments.
 
-1. Render Dashboard → **New → Blueprint**, connect this GitHub repo, apply.
-2. The service builds with `npm install` and starts with `node web/server.js`,
-   binding `0.0.0.0:$PORT` (Render sets `PORT`). Health check: `/healthz`.
-3. Read-only mode works immediately with no secrets.
-4. For play mode: set `LEDGERTOWN_MODE=play`, then add `LEDGERTOWN_DEMO_ACCOUNT`
-   and `LEDGERTOWN_DEMO_KEY` in **Environment** (they are `sync: false` in the
-   blueprint, so they are never committed). Use a **dedicated** testnet account
-   holding only a little testnet NEAR.
+- **Production URL:** `https://ledgertown.vercel.app/`
+- **Entry point:** `api/[...path].js` reuses the *same* handler as `web/server.js`
+  (`web/handler.js`), so routing, validation, the read-only/play split, rate
+  limits and security headers are identical in both.
+- `vercel.json` sets `outputDirectory: web` (the static UI), routes `/api/*` and
+  `/healthz` to the function, and applies the security headers to static files.
+- `.vercelignore` keeps `keys/`, `.env*`, local artefacts and the Rust target out
+  of the upload.
 
-Free-tier notes (from Render's docs): a Free web service **spins down after 15
-minutes without inbound traffic** and cold-starts on the next request (expect a
-short delay). Free services also have limited build minutes. No paid add-on or
-database is required — the app keeps no persistent local state.
+To deploy it yourself: import the repo at vercel.com (framework preset: **Other**,
+no build command needed — `vercel.json` supplies everything), or run `vercel`
+(preview) / `vercel --prod` (production) from a checkout. Read-only mode works
+immediately with **no environment variables and no secrets**.
 
-> **Never** put a mainnet key, an owner key, or a merchant key in any hosting
-> dashboard. Only a dedicated, low-balance testnet demo key belongs there.
+Play mode on a public host is **off by default** and is deliberately *not*
+enabled on the public site: it would require putting one funded shared signer in
+front of anonymous visitors (see "Public play mode is off by design" below). Set
+`LEDGERTOWN_MODE=play` plus `LEDGERTOWN_DEMO_ACCOUNT` and `LEDGERTOWN_DEMO_KEY`
+in **Project → Settings → Environment Variables** only if you accept that
+trade-off. Use a **dedicated** testnet account holding only a little testnet
+NEAR — never a mainnet, owner, or merchant key.
 
-### Alternative public host: Vercel
+#### Public play mode is off by design
 
-`api/[...path].js` + `vercel.json` run the same handler as a Vercel serverless
-function (read-only by default). Deploy with `vercel` (preview) or `vercel --prod`;
-set the same environment variables in the project settings. `outputDirectory: web`
-serves the static UI, `/api/*` is handled by the function, and `/healthz` is
-rewritten to it. **Verified:** the function answers `/api/health` (200) and
-`/api/state` with live day-51 state when driven locally. **Not verified end to
-end:** an actual Vercel publish — the account returned *"Your Team exceeded our
-fair use limits and has been blocked"* when `vercel dev` ran, so no Vercel
-deployment was created. Treat the Vercel path as ready-but-untested-on-Vercel;
-Render (above) is the verified host.
+The contract stores ONE shared `Player` purse (there is no per-visitor state).
+Exposing `play` mode publicly would mean **one funded shared demo signer behind
+anonymous visitors**, so any visitor could spend the town's shared credits and
+the demo account's testnet NEAR, and could race each other through a shared
+purse. That is unsafe to expose, so the public deployment runs **read-only**:
+
+- The UI and every figure are real, read from `town.ledgertown.testnet` over
+  public testnet RPC, with **no keys loaded at all**.
+- Every trade button is disabled in the UI and every action endpoint returns
+  `503` with a plain explanation.
+- `deposit` (which attaches NEAR) and every owner-only method (`reset`,
+  `add_shock`, `owner_withdraw`, `set_lifeline_enabled`, `seed_merchant`) are
+  never routed at all — they return `400`.
+
+To *play*, run the server locally in play mode with your own throwaway demo key
+(the `npm run serve` command above), or self-host and accept the shared-signer
+trade-off. Making play genuinely public and safe needs a contract change (a
+per-visitor purse), which is out of scope for this release and is disclosed as a
+gap in `docs/HACKATHON_SUBMISSION.md`.
+
+> **Serverless caveat (stated honestly).** The in-memory rate limits and the
+> single-flight lock in `web/handler.js` are **per instance**, not global: Vercel
+> may run several warm instances, and a cold start resets them. They bound
+> accidental flooding and duplicate fast-forwards on one instance; they are not a
+> global guarantee. This is acceptable because the public site is read-only, and
+> any future play deployment must not rely on them as the only control.
 
 ## Demo (one command)
 
@@ -236,7 +259,8 @@ Offline (no network, no account required):
 
 ```bash
 npm run test:contract     # 11 tests incl. exact 30-day parity vs the reference
-npm run test:agent        # 17 unit tests: merchant policy + failure detection + chain guard
+npm run test:agent        # 49 unit tests: merchant policy, failure detection, chain
+                          # guard, server guards, handler, town client, Vercel entry
 python3 feasibility/tests.py       # 25 invariants / determinism tests
 python3 feasibility/exploits.py    # 39 adversarial exploit probes
 ```
@@ -255,9 +279,14 @@ node scripts/verify-parity.js   # 30 days on the deployed contract vs golden (12
 Verified on the live deployment (`town.ledgertown.testnet`, NEAR testnet):
 
 - Contract: `cargo test` — **11 passed**, including exact 30-day parity.
-- Unit tests: `node --test tests/*.test.js` — **17 passed** (8 policy + 4 failure-detection + 5 chain-guard).
+- Unit tests: `node --test tests/*.test.js` — **49 passed** (policy, failure
+  detection, chain guard, server guards, handler, town client, Vercel entry).
 - Reference model: `feasibility/tests.py` — **25/25 passed**; `feasibility/exploits.py`
   — **39/39 passed**.
+- Public deployment: `https://ledgertown.vercel.app/` — read-only, serves live
+  `town.ledgertown.testnet` state with no keys; `/healthz` and `/api/state` answer
+  over the public internet; owner-only and `deposit` routes return `400`; oversized
+  and malformed bodies are rejected. (Re-verified against the released deployment.)
 - Live parity: `scripts/verify-parity.js` — **PASS, 120 rows, 0 mismatches** against the
   deployed `town.ledgertown.testnet` (reset + 30 ticks, every merchant every day).
 - Lifecycle: `driver/demo.js` produced a `CLOSED` (day 22, cash −2) then `REOPENED`
@@ -266,8 +295,10 @@ Verified on the live deployment (`town.ledgertown.testnet`, NEAR testnet):
   `player_invest` `G3mSM6Bmgd4pVtudmV6uCYWa3MAmbVsYZUQ1LWpz5UWk`.
 - Merchant agents: `driver/agent.js --rounds 2` — 8 real signed `merchant_decide`
   transactions; each proposal accepted and recorded in `last_decision`.
-- UI: verified at 320 / 390 / 768 / 1280 px (no horizontal overflow; touch targets
-  ≥44 px on phones); text contrast ≥ AA; every action links to a real explorer tx.
+- UI: verified at 320 / 390 / 768 / 1280 / 1440 px (no horizontal overflow; touch
+  targets ≥44 px on phones); text contrast ≥ AA; every action links to a real explorer tx.
+  Reference screenshots of the released read-only UI are in
+  `docs/screenshots/play-w{320,390,768,1280,1440}.png`.
 
 > Live checks require the deployed contract to exist and the owner to be funded. If
 > testnet has reaped `town.ledgertown.testnet`, redeploy first (`driver/deploy.js`).

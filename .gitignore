@@ -10,3 +10,6 @@ __pycache__/
 # Local env (never commit real values); keep the example
 .env
 !.env.example
+
+# Agent workspace notes (not part of the product)
+.openhands/

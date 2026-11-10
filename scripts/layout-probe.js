@@ -3,7 +3,7 @@
 // Uses Node's built-in global WebSocket (Node >= 22). Not part of the product.
 import { spawn } from "node:child_process";
 
-const WIDTHS = [320, 390, 768, 1280];
+const WIDTHS = [320, 390, 768, 1280, 1440];
 const PORT = 9333;
 
 const chrome = spawn("chromium", [
