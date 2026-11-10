@@ -80,9 +80,11 @@ web/                 public play server + interface
   server.js          process bootstrap; binds HOST/PORT, fails closed
   handler.js         HTTP routing, validation, rate limits, security headers
   guard.js           pure helpers: validation, rate limit, decision wording
+  economy.js         pure derivations the UI reads (position, price board, scarcity)
   town-client.js     read-only (key-free) and play (demo-key) town clients
   index.html         the town ledger UI
   app.js             UI script (external, so a strict CSP needs no inline JS)
+  provenance.json    verified testnet tx hashes behind today's town
 feasibility/         reference economic model (pure Python, no network)
   RULES.md           the normative economic rules
   simulate.py        the reference engine
@@ -216,6 +218,29 @@ gap in `docs/HACKATHON_SUBMISSION.md`.
 > global guarantee. This is acceptable because the public site is read-only, and
 > any future play deployment must not rely on them as the only control.
 
+## How to read the interface
+
+The interface is a *reading* of the on-chain economy, not a separate game. Every
+figure is derived from the contract's own state (`web/economy.js`), and the
+derivations are unit-tested (`tests/economy.test.js`).
+
+- **The market** — one panel per shop, showing four instruments drawn against the
+  contract's own thresholds: **cash** against the shop's `2 × fixed cost` reserve
+  (the line at which it stops buying stock), **stock** against `2 × base demand`
+  (the restock target), the **sell** price with its margin over average cost, and
+  the **buy** price. A plain line states the shop's health.
+- **The agent's decision** — each shop shows the contract's recorded
+  `last_decision` in plain words (**ACCEPTED** / **REJECTED**). The merchant only
+  *proposes*; the contract has the last word.
+- **The price board** — every open shop's quote for each good, cheapest marked.
+  Competition is visible here: when a shop undercuts, its quote turns green.
+- **Scarcity strip** — total open-shop stock of each good as days of cover against
+  base demand, so a good running thin or piling up is obvious at a glance.
+- **Town ledger** — the contract's real events. The **CLOSED** and **REOPENED**
+  rows link to the exact transactions that produced them.
+- **On-chain provenance** — the 14 verified testnet transactions that built
+  today's town (reset → flood → shock → close → invest → reopen → day 51).
+
 ## Demo (one command)
 
 ```bash
@@ -263,8 +288,9 @@ Offline (no network, no account required):
 
 ```bash
 npm run test:contract     # 11 tests incl. exact 30-day parity vs the reference
-npm run test:agent        # 50 unit tests: merchant policy, failure detection, chain
-                          # guard, server guards, handler, town client, Vercel entry
+npm run test:agent        # 62 unit tests: merchant policy, failure detection, chain
+                          # guard, server guards, handler, town client, economy
+                          # derivations, Vercel entry
 python3 feasibility/tests.py       # 25 invariants / determinism tests
 python3 feasibility/exploits.py    # 39 adversarial exploit probes
 ```
@@ -283,8 +309,9 @@ node scripts/verify-parity.js   # 30 days on the deployed contract vs golden (12
 Verified on the live deployment (`town.ledgertown.testnet`, NEAR testnet):
 
 - Contract: `cargo test` — **11 passed**, including exact 30-day parity.
-- Unit tests: `node --test tests/*.test.js` — **50 passed** (policy, failure
-  detection, chain guard, server guards, handler, town client, Vercel entry).
+- Unit tests: `node --test tests/*.test.js` — **62 passed** (policy, failure
+  detection, chain guard, server guards, handler, town client, the economy
+  derivations the UI reads, and the Vercel entry).
 - Reference model: `feasibility/tests.py` — **25/25 passed**; `feasibility/exploits.py`
   — **39/39 passed**.
 - Public deployment: `https://ledgertown.vercel.app/` — read-only, serves live
@@ -301,10 +328,11 @@ Verified on the live deployment (`town.ledgertown.testnet`, NEAR testnet):
   `player_invest` `G3mSM6Bmgd4pVtudmV6uCYWa3MAmbVsYZUQ1LWpz5UWk`.
 - Merchant agents: `driver/agent.js --rounds 2` — 8 real signed `merchant_decide`
   transactions; each proposal accepted and recorded in `last_decision`.
-- UI: verified at 320 / 390 / 768 / 1280 / 1440 px (no horizontal overflow; touch
-  targets ≥44 px on phones); text contrast ≥ AA; every action links to a real explorer tx.
-  Reference screenshots of the released read-only UI are in
-  `docs/screenshots/play-w{320,390,768,1280,1440}.png`.
+- UI: verified at 320 / 390 / 768 / 1280 / 1440 px (no horizontal overflow; no
+  browser-console errors; text contrast ≥ AA by measurement, compositing translucent
+  backgrounds; touch targets ≥44 px on phones); every action and the CLOSED/REOPENED
+  ledger rows link to a real explorer transaction. Reference screenshots of the
+  released read-only UI are in `docs/screenshots/release-w{320,390,768,1280,1440}.png`.
 
 > Live checks require the deployed contract to exist and the owner to be funded. If
 > testnet has reaped `town.ledgertown.testnet`, redeploy first (`driver/deploy.js`).
