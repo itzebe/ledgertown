@@ -167,6 +167,10 @@ deployment; pull requests produce preview deployments.
   limits and security headers are identical in both.
 - `vercel.json` sets `outputDirectory: web` (the static UI), routes `/api/*` and
   `/healthz` to the function, and applies the security headers to static files.
+  Because Vercel's generated route for a bracket catch-all matches only **one**
+  path segment in a non-framework build, `vercel.json` also carries an explicit
+  `"/api/:path*" → "/api/[...path]"` rewrite so nested routes such as
+  `/api/action/gather` reach the function instead of 404ing.
 - `.vercelignore` keeps `keys/`, `.env*`, local artefacts and the Rust target out
   of the upload.
 

@@ -17,5 +17,8 @@
       ]
     }
   ],
-  "rewrites": [{ "source": "/healthz", "destination": "/api/health" }]
+  "rewrites": [
+    { "source": "/healthz", "destination": "/api/health" },
+    { "source": "/api/:path*", "destination": "/api/[...path]" }
+  ]
 }
