@@ -11,7 +11,9 @@
     --paper:#f2ece0; --paper2:#eae2d3; --paper3:#e3dac7; --ink:#1b1815; --ink2:#4a4239;
     --muted:#635a4d; --rule:#cdc2ad; --copper:#9c4f1e; --copper2:#b5642c;
     --green:#3f6b3a; --red:#a1332a; --gold:#7a5a12;
+    --sky:#dfe4d8; --sky2:#cfd8c6;
     --mono:"Iosevka", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+    --sans:"Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
     --wrap:1240px;
   }
@@ -62,6 +64,68 @@
   .chip.glut .v{color:var(--green)}
   .chip.none .v{color:var(--red)}
 
+  /* ---- the town band: the primary interface ---- */
+  .town-band{background:linear-gradient(180deg,var(--sky) 0%,var(--sky2) 100%);
+    border-bottom:2px solid var(--ink);position:relative;overflow:hidden}
+  .town-in{max-width:var(--wrap);margin:0 auto;padding:6px 20px 2px;position:relative}
+  #town{display:block;width:100%}
+  #town-svg{display:block;width:100%;height:auto}
+  .town-legend{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;
+    padding:2px 20px 12px;font-size:11.5px;color:var(--ink2)}
+  .town-legend .lg{display:inline-flex;align-items:center;gap:6px}
+  .town-legend .sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(28,23,18,.25)}
+  .sw--thriving{background:#4f7a41} .sw--strained{background:#c08a2c} .sw--recovering{background:#3d6b8c}
+  .sw--distressed{background:#a5561f} .sw--insolvent{background:#7a2318} .sw--closed{background:#5a5245}
+  @media(max-width:640px){.town-legend{display:none}}
+  .town-hint{text-align:center;font-size:12px;color:var(--ink2);padding:0 20px 8px}
+
+  /* ---- narrow-screen town: tappable tiles carry the same condition ---- */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:4px 20px 10px;max-width:640px;margin:0 auto}
+  .tile{display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;
+    font-family:var(--serif);background:rgba(255,255,255,.6);border:1px solid var(--rule);
+    border-left:4px solid var(--rule);border-radius:5px;padding:9px 11px;cursor:pointer}
+  .tile-top{display:flex;align-items:center;gap:7px}
+  .tile-sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(28,23,18,.25);flex:none}
+  .tile-name{font-size:15px;font-weight:600;color:var(--ink)}
+  .tile-cond{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .tile-nums{font-family:var(--mono);font-size:11.5px;color:var(--ink2)}
+  .tile--thriving{border-left-color:#4f7a41} .tile--thriving .tile-sw{background:#4f7a41}
+  .tile--strained{border-left-color:#c08a2c} .tile--strained .tile-sw{background:#c08a2c}
+  .tile--recovering{border-left-color:#3d6b8c} .tile--recovering .tile-sw{background:#3d6b8c}
+  .tile--distressed{border-left-color:#a5561f} .tile--distressed .tile-sw{background:#a5561f}
+  .tile--insolvent{border-left-color:#7a2318} .tile--insolvent .tile-sw{background:#7a2318}
+  .tile--closed{border-left-color:#5a5245} .tile--closed .tile-sw{background:#5a5245}
+  .tile--sel{outline:2.5px solid var(--copper);outline-offset:1px}
+  @media(min-width:641px){.tiles{display:none}}
+
+  /* ---- building art ---- */
+  .bld{cursor:pointer;transition:transform .16s ease}
+  @media (prefers-reduced-motion:reduce){.bld{transition:none}.bld:hover,.bld:focus-visible{transform:none}}
+  .bld:hover,.bld:focus-visible{transform:translateY(-3px)}
+  .bld--sel .b-signplate rect{fill:var(--ink)}
+  .bld .b-shadow{fill:rgba(28,23,18,.14)}
+  .bld .b-body{fill:#d9c7a4;stroke:#5c4a34;stroke-width:2.4}
+  .bld .b-roof{fill:#8a5a3a;stroke:#5c4a34;stroke-width:2.4}
+  .bld .b-chimney{fill:#b9a184;stroke:#5c4a34;stroke-width:2.4}
+  .bld .b-door{fill:#6b5334;stroke:#4a3823;stroke-width:1.6}
+  .bld .b-arm{stroke:#4a3823;stroke-width:2}
+  .bld .b-sign{fill:var(--copper2);stroke:#4a3823;stroke-width:1.4}
+  .bld .win{stroke:#4a3823;stroke-width:1.8}
+  .bld .win--lit{fill:#f6d488} .bld .win--dim{fill:#c9b071}
+  .bld .win--dark{fill:#6d6355} .bld .win--boarded{fill:#7c6a4e}
+  .bld--closed .b-body{fill:#b9ab8f} .bld--closed .b-roof{fill:#7a6a52}
+  .bld--insolvent .b-body{fill:#c8b493}
+  .bld--recovering .b-roof{fill:#4f7a41}
+  .bld .b-smoke circle{fill:rgba(240,240,238,.72)}
+  .bld--closed .b-smoke,.bld--insolvent .b-smoke,.bld--distressed .b-smoke,.bld--strained .b-smoke{display:none}
+  .b-signplate rect{fill:#efe6d3;stroke:#5c4a34;stroke-width:1.6}
+  .b-name{font-family:var(--serif);font-size:15px;text-anchor:middle;fill:var(--ink);font-weight:600}
+  .b-spec{font-family:var(--sans);font-size:8.5px;text-anchor:middle;fill:#6a5f4d;letter-spacing:.04em;text-transform:uppercase}
+  .bld--sel .b-name,.bld--sel .b-spec{fill:#f6efe1}
+  .b-revived circle{fill:var(--green)} .b-revived text{fill:#fff;font-size:12px;text-anchor:middle;font-family:var(--sans)}
+  .sky-sun{fill:#f4d98a;opacity:.85} .sky-hill{fill:#c2cbb2}
+  .ground{fill:#b7a882} .road{stroke:#a2906a;stroke-width:22;opacity:.5}
+
   main{max-width:var(--wrap);margin:0 auto;padding:20px 20px 70px;display:grid;
     grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:30px}
   @media(max-width:900px){main{grid-template-columns:1fr}}
@@ -90,6 +154,7 @@
   .shop{border:1px solid var(--rule);border-radius:5px;background:rgba(255,255,255,.34);
     padding:13px 15px 14px;border-left:4px solid var(--rule)}
   .shop.open{border-left-color:var(--green)}
+  .shop.sel{outline:2.5px solid var(--copper);outline-offset:1px}
   .shop.closed{border-left-color:var(--red);background:#f6e7e3}
   .shop.insolvent{border-left-color:var(--gold)}
   .shop .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
@@ -143,6 +208,9 @@
   button:focus-visible{outline:2.5px solid var(--copper);outline-offset:2px}
   a:focus-visible{outline:2.5px solid var(--copper);outline-offset:2px;border-radius:2px}
   input:focus-visible{outline:2.5px solid var(--copper);outline-offset:1px}
+  .skip{position:absolute;left:-9999px;top:0;background:var(--ink);color:var(--paper);
+    padding:10px 16px;border-radius:0 0 4px 0;z-index:100;font-size:14px}
+  .skip:focus{left:0}
   button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
   button.primary:hover{background:#332d26}
   button:disabled{opacity:.45;cursor:not-allowed}
@@ -273,6 +341,7 @@
 </style>
 </head>
 <body>
+<a class="skip" href="#town">Skip to the town</a>
 <header class="masthead">
   <div class="brand">
     <h1>Ledgertown</h1>
@@ -292,6 +361,19 @@
     <div class="stat"><span class="cap">Town cash</span><span class="v num" id="p-cash">—</span></div>
     <div class="stat"><span class="cap">Your credits</span><span class="v num" id="p-player">—</span></div>
     <div class="scarcity" id="p-scarcity"></div>
+  </div>
+</div>
+
+<div class="town-band">
+  <div class="town-in"><div id="town" aria-live="polite"></div></div>
+  <div class="town-hint" id="town-hint">Select a shop to see its books.</div>
+  <div class="town-legend" aria-hidden="true">
+    <span class="lg"><span class="sw sw--thriving"></span>thriving</span>
+    <span class="lg"><span class="sw sw--strained"></span>under pressure</span>
+    <span class="lg"><span class="sw sw--recovering"></span>recovering</span>
+    <span class="lg"><span class="sw sw--distressed"></span>distressed</span>
+    <span class="lg"><span class="sw sw--insolvent"></span>insolvent</span>
+    <span class="lg"><span class="sw sw--closed"></span>closed</span>
   </div>
 </div>
 

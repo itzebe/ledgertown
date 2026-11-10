@@ -12,6 +12,7 @@
 // so the same deployment is safe to expose publicly.
 import { GOODS, marketRead } from "./economy.js";
 import { tradeSignals, challenges as buildChallenges, netWorth, cargoValue } from "./game.js";
+import { sceneModel, townSvg, townTiles } from "./scene.js";
 
 // The wallet module (and the 462 kB near-api-js bundle it imports) is loaded
 // only when the visitor connects — a read-only visitor never downloads it.
@@ -28,6 +29,8 @@ let lastDay = null;
 let focusMerchant = null;
 let provenance = null;
 let player = null;           // the connected account's own purse, or null
+let selected = null;         // the shop whose building is selected, or null
+let townSig = null;          // signature of the last rendered scene
 let walletCtl = null;        // wallet controller, or null when no extension
 let walletStatus = "browse"; // browse | connecting | connected | pending | error
 let walletError = null;
@@ -188,6 +191,39 @@ function renderPulse(){
   }).join("");
 }
 
+// The town scene: the four shops as buildings, the primary interface. Each
+// building's condition is drawn from the shop's real numbers (scene.js). The
+// scene re-renders only when a shop's condition or the selection changes — the
+// page polls every few seconds, and a blind re-render would replace the SVG and
+// steal keyboard focus from a visitor tabbing between buildings.
+function renderTown(){
+  const el = document.getElementById("town");
+  if(!el || !state) return;
+  const model = sceneModel(state, read);
+  const narrow = window.matchMedia("(max-width: 640px)").matches;
+  const sig = (narrow ? "tiles|" : "svg|") + model.map(b => `${b.id}:${b.state}:${b.window}:${b.reopened}:${b.cash}:${b.inv}`).join("|") + "|sel:" + (selected || "");
+  if(sig === townSig) return;
+  townSig = sig;
+  el.innerHTML = narrow ? townTiles(model, { selected }) : townSvg(model, { selected });
+  const hint = document.getElementById("town-hint");
+  if(hint){
+    const sel = model.find(b => b.id === selected);
+    hint.textContent = sel
+      ? `${sel.name} — ${sel.label}. Books below.`
+      : "Select a shop to see its books.";
+  }
+}
+
+function selectMerchant(id){
+  selected = id;
+  renderTown();
+  document.querySelectorAll("article.shop").forEach((el)=>{
+    el.classList.toggle("sel", el.id === "shop-" + id);
+  });
+  const card = document.getElementById("shop-" + id);
+  if(card) card.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 function renderMarket(){
   const el = document.getElementById("market");
   const perAccount = state.model === "per-account";
@@ -222,7 +258,8 @@ function renderMarket(){
          </div>`;
 
     const shop = document.createElement("article");
-    shop.className = "shop " + stateClass;
+    shop.id = "shop-" + m.id;
+    shop.className = "shop " + stateClass + (selected === m.id ? " sel" : "");
     shop.setAttribute("aria-label", `${m.name}, ${m.specialty} shop, ${m.state}`);
     shop.innerHTML = `
       <div class="top">
@@ -412,7 +449,7 @@ async function refresh(){
       player = null;
     }
     setBanner("");   // a good read clears any stale transient error
-    renderPulse(); renderMarket(); renderBoard(); renderPurse(); renderTimeline(); renderLog(); renderMine();
+    renderPulse(); renderTown(); renderMarket(); renderBoard(); renderPurse(); renderTimeline(); renderLog(); renderMine();
     renderWallet(); renderChallenges(); renderPlayActions();
   }catch(e){
     // A transient upstream failure (RPC rate limit, brief outage) must NOT
@@ -479,6 +516,9 @@ async function playerAct(label, method, args, merchant){
 }
 
 document.addEventListener("click", async (ev)=>{
+  // A building in the town scene: select it and open its books.
+  const bld = ev.target.closest("[data-merchant]");
+  if(bld){ selectMerchant(bld.dataset.merchant); return; }
   if(ev.target.id === "clear-focus"){ ev.preventDefault(); focusMerchant = null; renderMine(); return; }
   const b = ev.target.closest("button"); if(!b) return;
 
@@ -523,6 +563,16 @@ document.addEventListener("click", async (ev)=>{
     return playerAct(`Invested ${amount} in ${id}`, "player_invest", { merchant_id: id, amount: String(amount) }, id);
   }
 });
+
+document.addEventListener("keydown", (ev)=>{
+  if(ev.key !== "Enter" && ev.key !== " ") return;
+  const bld = ev.target.closest("[data-merchant]");
+  if(!bld) return;
+  ev.preventDefault();
+  selectMerchant(bld.dataset.merchant);
+});
+
+window.addEventListener("resize", ()=>{ townSig = null; renderTown(); });
 
 loadProvenance();
 refresh();

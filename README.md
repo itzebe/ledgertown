@@ -255,6 +255,13 @@ The interface is a *reading* of the on-chain economy, not a separate game. Every
 figure is derived from the contract's own state (`web/economy.js`), and the
 derivations are unit-tested (`tests/economy.test.js`).
 
+- **The town** — the scene above the fold, and the primary interface. Each shop is
+  a building whose condition is drawn from its real numbers (`web/scene.js`,
+  `tests/scene.test.js`): a thriving shop has lit windows and smoke, a strained one
+  dim windows, an insolvent one goes dark, and a closed one is boarded up. Select a
+  building — by pointer or keyboard — to open that shop's books below. On narrow
+  screens the same four shops appear as tappable tiles, so the drawing never shrinks
+  to illegible labels.
 - **The market** — one panel per shop, showing four instruments drawn against the
   contract's own thresholds: **cash** against the shop's `2 × fixed cost` reserve
   (the line at which it stops buying stock), **stock** against `2 × base demand`
@@ -325,9 +332,9 @@ Offline (no network, no account required):
 
 ```bash
 npm run test:contract     # 20 tests: per-account purses, isolation, migration, parity
-npm run test:agent        # 90 unit tests: merchant policy, failure detection, chain
+npm run test:agent        # 104 unit tests: merchant policy, failure detection, chain
                           # guard, server guards, handler, town client, economy
-                          # derivations, game logic, wallet layer, Vercel entry
+                          # derivations, game logic, town scene, wallet layer, Vercel entry
 python3 feasibility/tests.py       # 25 invariants / determinism tests
 python3 feasibility/exploits.py    # 39 adversarial exploit probes
 ```
@@ -347,10 +354,10 @@ Verified on the live deployment (`town.ledgertown.testnet`, NEAR testnet):
 
 - Contract: `cargo test` — **20 passed** (per-account purse isolation, owner-only
   migration, exact 30-day parity).
-- Unit tests: `node --test tests/*.test.js` — **90 passed** (policy, failure
+- Unit tests: `node --test tests/*.test.js` — **104 passed** (policy, failure
   detection, chain guard, server guards, handler incl. the `/api/player` endpoint,
-  town client, the economy derivations the UI reads, the game logic, the
-  non-custodial wallet layer, and the Vercel entry).
+  town client, the economy derivations the UI reads, the game logic, the town
+  scene, the non-custodial wallet layer, and the Vercel entry).
 - Reference model: `feasibility/tests.py` — **25/25 passed**; `feasibility/exploits.py`
   — **39/39 passed**.
 - Public deployment: `https://ledgertown.vercel.app/` — read-only, serves live
