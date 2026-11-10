@@ -3,80 +3,138 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="Ledgertown — a live market town on NEAR testnet. Four AI merchant shops with their own accounts, one deterministic economy, on-chain insolvency and revival." />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<title>Ledgertown — an agent-run market town on NEAR</title>
+<title>Ledgertown — a live market town on NEAR</title>
 <style>
   :root{
-    --paper:#f2ece0; --paper2:#eae2d3; --ink:#1b1815; --ink2:#4a4239;
+    --paper:#f2ece0; --paper2:#eae2d3; --paper3:#e3dac7; --ink:#1b1815; --ink2:#4a4239;
     --muted:#635a4d; --rule:#cdc2ad; --copper:#9c4f1e; --copper2:#b5642c;
     --green:#3f6b3a; --red:#a1332a; --gold:#7a5a12;
     --mono:"Iosevka", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --wrap:1240px;
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--paper);color:var(--ink)}
   body{font-family:var(--serif);font-size:16px;line-height:1.5;
     background-image:radial-gradient(circle at 18% 12%,rgba(156,79,30,.05),transparent 40%),
-      radial-gradient(circle at 82% 88%,rgba(63,107,58,.05),transparent 42%);}
+      radial-gradient(circle at 82% 88%,rgba(63,107,58,.05),transparent 42%);
+    background-attachment:fixed}
   .num{font-family:var(--mono);font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
   a{color:var(--copper);text-underline-offset:2px}
-  header{border-bottom:2px solid var(--ink);padding:18px 26px 14px;display:flex;
-    align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap}
-  .brand{display:flex;align-items:baseline;gap:14px}
-  .brand h1{font-size:30px;margin:0;letter-spacing:-.02em}
-  .brand .sub{color:var(--muted);font-size:13.5px;max-width:46ch}
-  .stamp{font-family:var(--mono);font-size:11.5px;color:var(--copper);
-    border:1px solid var(--copper);border-radius:2px;padding:3px 7px;letter-spacing:.06em;
-    text-transform:uppercase;white-space:nowrap}
-  .daybar{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}
-  .daybar .d{font-family:var(--mono);font-size:40px;line-height:1;letter-spacing:-.03em}
-  .daybar .lbl{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+  h1,h2,h3{margin:0}
+  .cap{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
 
-  main{max-width:1180px;margin:0 auto;padding:22px 26px 80px;display:grid;
-    grid-template-columns:1.55fr .95fr;gap:34px}
-  @media(max-width:880px){main{grid-template-columns:1fr}}
-  /* Grid items default to min-content width; let them shrink instead. */
+  /* ---- masthead ---- */
+  header.masthead{border-bottom:2px solid var(--ink);
+    padding:16px max(20px,calc((100vw - var(--wrap))/2 + 20px)) 12px;
+    display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap}
+  .brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .brand h1{font-size:30px;letter-spacing:-.025em}
+  .brand .sub{color:var(--muted);font-size:13px;max-width:52ch}
+  .daybar{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+  .daybar .blk{display:flex;flex-direction:column}
+  .daybar .d{font-family:var(--mono);font-size:38px;line-height:1;letter-spacing:-.03em}
+  .live{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 0 0 rgba(63,107,58,.6);animation:p 2.4s infinite}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(63,107,58,.5)}70%{box-shadow:0 0 0 7px rgba(63,107,58,0)}100%{box-shadow:0 0 0 0 rgba(63,107,58,0)}}
+  @media (prefers-reduced-motion:reduce){.dot{animation:none}}
+
+  /* ---- town pulse strip ---- */
+  .pulse{border-bottom:1px solid var(--rule);background:rgba(255,255,255,.28)}
+  .pulse-in{max-width:var(--wrap);margin:0 auto;padding:10px 20px;display:flex;gap:22px;
+    align-items:center;flex-wrap:wrap}
+  .pulse .stat{display:flex;flex-direction:column;line-height:1.25}
+  .pulse .stat .v{font-family:var(--mono);font-size:17px}
+  .pulse .scarcity{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);
+    border-radius:999px;padding:3px 10px 3px 8px;font-size:12px;background:var(--paper2)}
+  .chip .g{font-family:var(--mono);font-weight:600}
+  .chip .m{color:var(--muted)}
+  .chip .v{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  .chip.scarce{border-color:rgba(161,51,42,.45);background:#f6e4e0}
+  .chip.scarce .v{color:var(--red)}
+  .chip.tight{border-color:rgba(122,90,18,.4);background:#f4edd6}
+  .chip.tight .v{color:var(--gold)}
+  .chip.glut{border-color:rgba(63,107,58,.4);background:#e6ecdb}
+  .chip.glut .v{color:var(--green)}
+  .chip.none .v{color:var(--red)}
+
+  main{max-width:var(--wrap);margin:0 auto;padding:20px 20px 70px;display:grid;
+    grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:30px}
+  @media(max-width:900px){main{grid-template-columns:1fr}}
   main > div{min-width:0}
-  .stall > *{min-width:0}
 
-  section{margin-bottom:30px}
-  h2{font-size:13px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);
-    margin:0 0 12px;font-weight:600;border-bottom:1px solid var(--rule);padding-bottom:7px}
+  section{margin-bottom:26px}
+  h2.sec{font-size:12px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);
+    margin:0 0 12px;font-weight:600;border-bottom:1px solid var(--rule);padding-bottom:6px;
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  h2.sec .hint{font-size:11px;letter-spacing:.02em;text-transform:none;color:var(--muted);font-weight:400}
 
-  /* merchant ledger rows, not cards */
-  .stall{display:grid;grid-template-columns:112px 1fr;gap:14px;padding:14px 0;
-    border-bottom:1px solid var(--rule)}
-  .stall:last-child{border-bottom:0}
-  .who .nm{font-size:19px;letter-spacing:-.01em}
-  .who .sp{font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-  .who .acct{font-family:var(--mono);font-size:10.5px;color:var(--muted);word-break:break-all}
-  .figs{display:flex;gap:22px;flex-wrap:wrap;align-items:baseline}
-  .fig{min-width:64px}
-  .fig .k{font-size:10.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-  .fig .v{font-size:19px}
-  .state{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:2px;text-transform:uppercase;letter-spacing:.06em}
-  /* Opaque tints: a translucent fill over the page made the small badge text
-     fall to ~4.0:1. These hold >=4.5:1 while keeping the same green/red/gold. */
+  /* ---- merchant shops (the market) ---- */
+  .market{display:grid;gap:12px}
+  details.rules{margin:0 0 12px;border:1px solid var(--rule);border-radius:4px;
+    background:rgba(255,255,255,.3);font-size:12.5px}
+  details.rules > summary{cursor:pointer;padding:8px 12px;font-weight:600;color:var(--ink2);
+    list-style:none;display:flex;align-items:center;gap:8px}
+  details.rules > summary::-webkit-details-marker{display:none}
+  details.rules > summary::before{content:"▸";font-family:var(--mono);color:var(--copper)}
+  details.rules[open] > summary::before{content:"▾"}
+  details.rules > summary:focus-visible{outline:2.5px solid var(--copper);outline-offset:2px}
+  .rules-body{padding:2px 14px 12px;color:var(--ink2)}
+  .rules-body p{margin:6px 0} .rules-body ol{margin:6px 0;padding-left:20px}
+  .rules-body li{margin:3px 0}
+  .rules-body code{font-family:var(--mono);font-size:11.5px;background:var(--paper2);padding:1px 4px;border-radius:2px}
+  .shop{border:1px solid var(--rule);border-radius:5px;background:rgba(255,255,255,.34);
+    padding:13px 15px 14px;border-left:4px solid var(--rule)}
+  .shop.open{border-left-color:var(--green)}
+  .shop.closed{border-left-color:var(--red);background:#f6e7e3}
+  .shop.insolvent{border-left-color:var(--gold)}
+  .shop .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .shop .nm{font-size:20px;letter-spacing:-.01em}
+  .shop .nm .sp{font-family:var(--mono);font-size:11px;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.07em;margin-left:6px}
+  .shop .acct{font-family:var(--mono);font-size:10.5px;color:var(--muted);word-break:break-all;margin-top:1px}
+  .state{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:2px;
+    text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
   .state.open{background:#e3e8d6;color:var(--green);border:1px solid rgba(63,107,58,.4)}
   .state.closed{background:#eedcd8;color:var(--red);border:1px solid rgba(161,51,42,.4)}
   .state.insolvent{background:#efe6c9;color:var(--gold);border:1px solid rgba(122,90,18,.4)}
-  .why{font-size:12.5px;color:var(--ink2);font-style:italic;margin-top:5px}
-  .advance{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .prog{font-family:var(--mono);font-size:11.5px;color:var(--muted);min-height:1em}
-  .decision{font-size:12.5px;margin-top:5px}
+  .recovered{font-family:var(--mono);font-size:10px;color:var(--green);
+    border:1px solid rgba(63,107,58,.4);border-radius:2px;padding:1px 5px;margin-left:6px;white-space:nowrap}
+
+  .instruments{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:11px}
+  @media(max-width:560px){.instruments{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .inst{min-width:0}
+  .inst .v{font-family:var(--mono);font-size:18px;line-height:1.15;white-space:nowrap}
+  .inst .sub{font-size:11px;color:var(--muted);margin-top:2px;min-height:1.2em}
+  .inst .sub.pos{color:var(--green)} .inst .sub.neg{color:var(--red)}
+  .meter{position:relative;height:7px;border-radius:3px;background:var(--paper3);
+    margin:5px 0 1px;overflow:hidden}
+  .meter > span{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--copper2)}
+  .meter.good > span{background:var(--green)}
+  .meter.warn > span{background:var(--gold)}
+  .meter.bad > span{background:var(--red)}
+  .meter .tick{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink);opacity:.55}
+  .meter .fill-mid{position:absolute;top:0;bottom:0;width:2px;background:var(--ink);opacity:.35}
+
+  .decision{font-size:12.5px;margin-top:10px;padding-top:9px;border-top:1px dotted var(--rule)}
+  .risk{font-size:12px;margin-top:8px;padding-left:9px;border-left:3px solid var(--rule);color:var(--ink2)}
+  .risk.ok{border-left-color:rgba(63,107,58,.5)}
+  .risk.warn{border-left-color:var(--gold)}
+  .risk.critical{border-left-color:var(--red)}
+  .risk.closed{border-left-color:var(--red);color:var(--red)}
   .decision .tag{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em;
     border-radius:2px;padding:1px 5px;margin-right:6px}
   .decision.accepted .tag{background:#e3e8d6;color:var(--green)}
   .decision.rejected .tag{background:#eedcd8;color:var(--red)}
   .decision.none .tag{background:var(--paper2);color:var(--muted)}
   .decision.recorded .tag{background:var(--paper2);color:var(--muted)}
-  .mode-note{border:1px solid var(--rule);border-left:4px solid var(--copper);border-radius:3px;
-    background:rgba(156,79,30,.05);padding:9px 13px;font-size:12.5px;color:var(--ink2);margin:0 0 18px}
-  .mode-note b{color:var(--ink)}
-  .howto{margin:0 0 4px;padding-left:20px;font-size:13px;color:var(--ink2)}
-  .howto li{margin:0 0 6px}
+  .decision .why{color:var(--ink2);font-style:italic}
 
-  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;align-items:center}
   button{font-family:var(--serif);font-size:13.5px;background:var(--paper2);
     border:1px solid var(--ink);border-radius:3px;padding:6px 11px;cursor:pointer;color:var(--ink);
     transition:background .12s,transform .06s}
@@ -86,150 +144,161 @@
   button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
   button.primary:hover{background:#332d26}
   button:disabled{opacity:.45;cursor:not-allowed}
-  input[type=number],select{font-family:var(--mono);font-size:13px;background:#fff;
-    border:1px solid var(--rule);border-radius:3px;padding:5px 7px;width:66px}
+  input[type=number]{font-family:var(--mono);font-size:13px;background:#fff;
+    border:1px solid var(--rule);border-radius:3px;padding:5px 7px;width:62px}
 
-  .purse{border:1.5px solid var(--ink);border-radius:4px;padding:16px 18px;background:var(--paper2)}
-  .purse .row{display:flex;justify-content:space-between;align-items:baseline;margin:5px 0}
-  .purse .big{font-family:var(--mono);font-size:34px;letter-spacing:-.02em}
-  .purse .cap{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  /* ---- price board ---- */
+  .board{display:grid;gap:2px}
+  .brow{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;
+    padding:7px 0;border-bottom:1px solid var(--rule)}
+  .brow:last-child{border-bottom:0}
+  .brow .gname{font-family:var(--mono);font-size:12.5px;text-transform:uppercase;letter-spacing:.05em}
+  .brow .gname .dc{display:block;font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0}
+  .quotes{display:flex;gap:6px;flex-wrap:wrap}
+  .q{display:inline-flex;align-items:baseline;gap:5px;border:1px solid var(--rule);border-radius:3px;
+    padding:2px 7px;background:var(--paper2);font-size:12px}
+  .q .who{color:var(--muted);font-size:11px}
+  .q .p{font-family:var(--mono);font-size:13px}
+  .q.cheap{border-color:var(--green);background:#e6ecdb}
+  .q.cheap .p{color:var(--green);font-weight:600}
+  .q.dear{border-color:rgba(161,51,42,.4)}
+  .q.dear .p{color:var(--red)}
+
+  /* ---- side panel ---- */
+  .purse{border:1.5px solid var(--ink);border-radius:4px;padding:15px 17px;background:var(--paper2)}
+  .purse .row{display:flex;justify-content:space-between;align-items:baseline;margin:4px 0}
+  .purse .big{font-family:var(--mono);font-size:33px;letter-spacing:-.02em}
   .inv{font-family:var(--mono);font-size:13px;color:var(--ink2)}
-  .inv span{display:inline-block;min-width:74px}
+  .inv span{display:inline-block;min-width:74px;margin-right:10px}
+  .shared{font-size:11.5px;color:var(--muted);margin:8px 0 0}
 
-  /* the ledger: the memorable thing — every event is a clickable NEAR tx */
-  .log{max-height:340px;overflow:auto;border-top:1px solid var(--rule)}
-  .ev{display:grid;grid-template-columns:38px 1fr;gap:10px;padding:8px 2px;border-bottom:1px solid var(--rule);font-size:13.5px}
+  .log{max-height:330px;overflow:auto;border-top:1px solid var(--rule)}
+  /* lifecycle timeline: the real closure/recovery story at a glance */
+  .timeline{display:flex;align-items:stretch;gap:0;margin:2px 0 12px;flex-wrap:wrap}
+  .tl{flex:1 1 0;min-width:70px;border-top:3px solid var(--rule);padding:7px 8px 2px;position:relative}
+  .tl:first-child{padding-left:0}
+  .tl .dlbl{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+  .tl .tlv{font-size:12.5px;font-weight:600}
+  .tl.ok{border-top-color:var(--green)} .tl.ok .tlv{color:var(--green)}
+  .tl.bad{border-top-color:var(--red)} .tl.bad .tlv{color:var(--red)}
+  .tl.now{border-top-color:var(--copper)} .tl.now .tlv{color:var(--copper)}
+  .tl .tlsub{font-size:10.5px;color:var(--muted)}
+  .ev{display:grid;grid-template-columns:40px 1fr;gap:10px;padding:7px 2px;border-bottom:1px solid var(--rule);font-size:13px}
   .ev .day{font-family:var(--mono);color:var(--muted);font-size:12px;padding-top:2px}
   .ev .kind{font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--copper)}
-  .ev .tx{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+  .ev .kind.close{color:var(--red)} .ev .kind.reopen{color:var(--green)}
+  .ev .tx{font-family:var(--mono);font-size:10.5px}
   .ev .tx a{color:var(--muted)}
+  .ev.today{background:rgba(156,79,30,.06)} .ev.today .day{color:var(--copper);font-weight:700}
   .muted{color:var(--muted)}
-  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:var(--ink);
+  .skeleton{height:1.1em;border-radius:2px;background:linear-gradient(90deg,var(--rule),var(--paper2),var(--rule));
+    background-size:200% 100%;animation:sk 1.3s linear infinite;display:inline-block;min-width:44px}
+  @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  @media (prefers-reduced-motion:reduce){.skeleton{animation:none}}
+
+  /* provenance */
+  .prov{display:grid;gap:0;border-top:1px solid var(--rule)}
+  .prow{display:grid;grid-template-columns:1fr auto;gap:10px;padding:7px 2px;
+    border-bottom:1px solid var(--rule);align-items:baseline;font-size:12.5px}
+  .prow .lbl{color:var(--ink2)}
+  .prow .h{font-family:var(--mono);font-size:10.5px}
+  .prow .h a{color:var(--copper)}
+
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:var(--ink);
     color:var(--paper);padding:11px 18px;border-radius:4px;font-size:13.5px;max-width:88vw;
     opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
-  .toast.show{opacity:1}
-  .toast.err{background:var(--red)}
-  /* error banner: persistent, near the top, says what to do next */
+  .toast.show{opacity:1} .toast.err{background:var(--red)}
   .banner{margin:0 0 18px;padding:10px 14px;border:1px solid var(--red);border-left-width:4px;
     border-radius:3px;background:rgba(161,51,42,.07);color:var(--red);font-size:13.5px}
   .banner code{font-family:var(--mono);font-size:12px}
-  /* day-over-day deltas — the "what changed since yesterday" signal */
-  .delta{font-family:var(--mono);font-size:11.5px;margin-left:5px}
-  .delta.up{color:var(--green)}
-  .delta.down{color:var(--red)}
-  .delta.flat{color:var(--muted)}
-  .ev.today{background:rgba(156,79,30,.06)}
-  .ev.today .day{color:var(--copper);font-weight:700}
-  .recovered{font-family:var(--mono);font-size:10.5px;color:var(--green);
-    border:1px solid rgba(63,107,58,.4);border-radius:2px;padding:1px 5px;margin-left:6px}
-  .skeleton{height:1.1em;border-radius:2px;background:linear-gradient(90deg,var(--rule),var(--paper2),var(--rule));
-    background-size:200% 100%;animation:sk 1.3s linear infinite;display:inline-block;min-width:48px}
-  @keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
-  @media (prefers-reduced-motion:reduce){.skeleton{animation:none}}
-  footer{max-width:1180px;margin:0 auto;padding:0 26px 40px;color:var(--muted);font-size:12.5px}
-  .live{display:inline-flex;align-items:center;gap:6px}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(63,107,58,.6);animation:p 2.4s infinite}
-  @keyframes p{0%{box-shadow:0 0 0 0 rgba(63,107,58,.5)}70%{box-shadow:0 0 0 7px rgba(63,107,58,0)}100%{box-shadow:0 0 0 0 rgba(63,107,58,0)}}
-  @media (prefers-reduced-motion:reduce){.dot{animation:none}}
+  .mode-note{border:1px solid var(--rule);border-left:4px solid var(--copper);border-radius:3px;
+    background:rgba(156,79,30,.05);padding:9px 13px;font-size:12.5px;color:var(--ink2);margin:0 0 18px}
+  .mode-note b{color:var(--ink)}
 
-  /* Narrow phones: reflow, larger touch targets, no horizontal scroll. */
+  .delta{font-family:var(--mono);font-size:11.5px;margin-left:5px}
+  .delta.up{color:var(--green)} .delta.down{color:var(--red)} .delta.flat{color:var(--muted)}
+
+  footer{max-width:var(--wrap);margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:12.5px}
+
   @media (max-width:520px){
-    header{padding:14px 16px 12px;gap:12px}
-    main{padding:16px 16px 60px;gap:22px}
+    header.masthead{padding:13px 15px 11px;gap:10px}
+    .pulse-in{padding:9px 15px;gap:14px}
+    main{padding:15px 15px 56px;gap:20px}
     .brand h1{font-size:25px}
-    .brand .sub{font-size:12.5px}
-    .daybar{gap:12px}
-    .daybar .d{font-size:31px}
-    .stall{grid-template-columns:minmax(0,1fr);gap:8px;padding:12px 0}
-    .who{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-    .who .acct{width:100%}
-    .figs{gap:14px 20px}
-    .inv span{min-width:0;margin-right:14px}
+    .daybar .d{font-size:30px}
+    .pulse .scarcity{margin-left:0;width:100%}
     button{min-height:44px;padding:9px 13px}
-    input[type=number],select{min-height:44px}
-    .purse .big{font-size:30px}
+    input[type=number]{min-height:44px}
+    .purse .big{font-size:29px}
   }
-  /* Touch devices at any width (e.g. tablets): comfortable tap targets. */
-  @media (pointer:coarse){
-    button{min-height:44px;padding:9px 13px}
-    input[type=number],select{min-height:44px}
-  }
+  @media (pointer:coarse){button{min-height:44px;padding:9px 13px}input[type=number]{min-height:44px}}
 </style>
 </head>
 <body>
-<header>
+<header class="masthead">
   <div class="brand">
     <h1>Ledgertown</h1>
-    <div class="sub">A market town run by AI merchants — four shops, four goods, one
-      deterministic economy. Every figure below is on NEAR testnet.</div>
+    <div class="sub">A market town run by AI merchants. Four shops, four goods, one
+      deterministic economy — settled on NEAR testnet.</div>
   </div>
   <div class="daybar">
-    <div>
-      <div class="lbl">Market day</div>
-      <div class="d num" id="day">—</div>
-    </div>
-    <div>
-      <div class="lbl">Contract</div>
-      <div class="num" id="contract" style="font-size:12px">—</div>
-    </div>
-    <div class="advance">
-      <button class="primary" id="advance">Advance one day ▸</button>
-      <button id="advance7">Fast-forward 7 days ▸▸</button>
-      <div class="prog" id="prog" role="status" aria-live="polite"></div>
-    </div>
+    <div class="blk"><span class="cap">Market day</span><span class="d num" id="day">—</span></div>
+    <div class="blk"><span class="cap">Contract</span><span class="num" id="contract" style="font-size:12px">—</span></div>
     <span class="live"><span class="dot"></span><span class="muted" style="font-size:12px">live RPC</span></span>
   </div>
 </header>
 
+<div class="pulse">
+  <div class="pulse-in" id="pulse">
+    <div class="stat"><span class="cap">Shops open</span><span class="v num" id="p-open">—</span></div>
+    <div class="stat"><span class="cap">Town cash</span><span class="v num" id="p-cash">—</span></div>
+    <div class="stat"><span class="cap">Your credits</span><span class="v num" id="p-player">—</span></div>
+    <div class="scarcity" id="p-scarcity"></div>
+  </div>
+</div>
+
 <main>
   <div id="banner-slot"></div>
+
   <div>
     <section>
-      <h2>How the town works</h2>
-      <ol class="howto">
-        <li><b>The town</b> is a persistent market whose rules live in a NEAR testnet
-          smart contract. The contract — not the browser — is the economic authority.</li>
-        <li><b>Four merchants</b> each run one shop and specialise in one good:
-          miller&nbsp;→&nbsp;grain, smith&nbsp;→&nbsp;iron, weaver&nbsp;→&nbsp;cloth,
-          brewer&nbsp;→&nbsp;ale.</li>
-        <li><b>You</b> gather goods for free, sell them to a merchant for credits, buy
-          stock to trade, or advance the market day. Advancing a day runs one full
-          settlement cycle for every shop.</li>
-        <li><b>A merchant can close</b> if it cannot cover its daily fixed cost for
-          several days — you will see a <span class="state closed">closed</span> badge
-          and a <code>CLOSED</code> event in the ledger.</li>
-        <li><b>Investment revives it.</b> Fund a closed shop to at least twice its
-          fixed cost and the contract reopens it, recording a <code>REOPENED</code> event.</li>
-        <li><b>Testnet only.</b> Credits are game credits on NEAR testnet, not money.
-          Nothing here touches mainnet or real funds.</li>
-      </ol>
+      <h2 class="sec">The market <span class="hint" id="market-hint">four shops, each quoting every good</span></h2>
+      <details class="rules">
+        <summary>How a merchant decides (and who has the last word)</summary>
+        <div class="rules-body">
+          <p>Each shop runs one fixed, readable policy over its own on-chain state:</p>
+          <ol>
+            <li>Restock toward <b>twice its base daily demand</b>, but only with cash above a
+              <b>reserve of 2× fixed cost</b>.</li>
+            <li>If a rival quotes the same good cheaper, <b>undercut by one 200&nbsp;bp step</b>
+              (markup floor 500&nbsp;bp); otherwise relax markup back toward <b>2200&nbsp;bp</b>.</li>
+          </ol>
+          <p>The merchant only <b>proposes</b> (<code>merchant_decide</code>, signed by its own
+            NEAR account). The contract re-checks every proposal against real cash and stock and
+            records <b>ACCEPTED</b> or <b>REJECTED</b> — that is the decision shown on each shop.</p>
+          <p>A shop below its reserve stops buying; below fixed cost for three days with no sales
+            it <b>closes</b>; funding it back to <b>2× fixed cost</b> <b>reopens</b> it. Both are
+            on-chain events.</p>
+        </div>
+      </details>
+      <div class="market" id="market"></div>
     </section>
 
     <section>
-      <h2>Four merchants, four goods</h2>
-      <p class="muted" style="font-size:12.5px;margin:-4px 0 10px">
-        Each shop is run by its own on-chain agent. Prices, stock and cash are read
-        from the contract; the merchant closes if it cannot cover its costs, and a
-        closed shop can be revived by investment.</p>
-      <div id="stalls"></div>
+      <h2 class="sec">Price board <span class="hint">cheapest quote for each good is marked</span></h2>
+      <div class="board" id="board"></div>
     </section>
   </div>
 
   <div>
     <section>
-      <h2>Your purse</h2>
-      <p class="muted" style="font-size:12.5px;margin:-4px 0 10px">
-        Gather goods for free, sell them to a merchant for credits, or buy stock to
-        trade. This is the town's one shared on-chain purse — every visitor trades
-        from the same credits.</p>
+      <h2 class="sec">Your purse</h2>
       <div class="purse">
         <div class="row"><span class="cap">Credits</span><span class="big num" id="pcash">—</span></div>
         <div class="row"><span class="cap">Deposited</span><span class="num" id="pdep">—</span></div>
-        <div class="cap" style="margin-top:10px">Cargo</div>
+        <span class="cap" style="display:block;margin-top:9px">Cargo</span>
         <div class="inv" id="pinv"><span class="muted">empty</span></div>
-        <p class="muted" style="font-size:11.5px;margin:8px 0 0" id="shared-note">
-          This is the town's single shared player purse, stored on-chain. Everyone who plays
-          trades from the same purse.</p>
+        <p class="shared" id="shared-note">One shared on-chain purse — every visitor trades from the same credits.</p>
         <div class="actions">
           <span class="cap" style="align-self:center">Gather (free)</span>
           <button class="gather" data-gather="grain">grain</button>
@@ -237,32 +306,43 @@
           <button class="gather" data-gather="cloth">cloth</button>
           <button class="gather" data-gather="ale">ale</button>
         </div>
+        <div class="actions" style="margin-top:12px">
+          <span class="cap" style="align-self:center">Market clock</span>
+          <button class="primary" id="advance">Advance one day ▸</button>
+          <button id="advance7">Fast-forward 7 days ▸▸</button>
+          <span class="muted num" id="prog" role="status" aria-live="polite" style="font-size:11.5px"></span>
+        </div>
       </div>
     </section>
 
     <section>
-      <h2>Your transactions</h2>
+      <h2 class="sec">Your transactions</h2>
       <div class="log" id="mine"></div>
-      <p class="muted" style="font-size:12px;margin-top:8px">Every action you take signs a real
-        transaction on <span class="num">town.ledgertown.testnet</span>. Click a hash to open it
-        in the explorer.</p>
     </section>
 
     <section>
-      <h2>Town ledger</h2>
+      <h2 class="sec">Town ledger <span class="hint">on-chain events</span></h2>
+      <div class="timeline" id="timeline"></div>
       <div class="log" id="log"></div>
-      <p class="muted" style="font-size:12px;margin-top:8px">Economic events the contract
-        recorded on-chain — including the smith's closure and revival.</p>
+    </section>
+
+    <section>
+      <h2 class="sec">On-chain provenance <span class="hint">verified testnet txs</span></h2>
+      <div class="prov" id="prov"></div>
+      <p class="muted" style="font-size:11.5px;margin-top:8px">
+        The lifecycle that produced today's town — including the smith's
+        <b>CLOSED</b> (day 22) and <b>REOPENED</b> (day 31). Each hash opens on the
+        explorer.</p>
     </section>
   </div>
 </main>
 
 <footer>
-  Deterministic engine · exact rational arithmetic on i128 · 30-day on-chain parity with the
-  reference simulation. Testnet only — credits are not money.
+  Deterministic engine · exact rational arithmetic on <span class="num">i128</span> ·
+  exact 30-day on-chain parity with the reference simulation. Testnet only — credits are not money.
 </footer>
 <div class="toast" id="toast"></div>
 
-<script src="/app.js" defer></script>
+<script type="module" src="/app.js"></script>
 </body>
 </html>

@@ -266,3 +266,16 @@ test("cleanError strips the RPC JSON wrapper", () => {
   const e = new Error('{"ExecutionError":"Smart contract panicked: gather 1..=50 per call"}');
   assert.equal(cleanError(e), "gather 1..=50 per call");
 });
+
+test("static .json assets are served as application/json (provenance panel)", async () => {
+  const { handler } = build();
+  const res = await call(handler, "GET", "/provenance.json");
+  assert.equal(res.statusCode, 200);
+  assert.match(res.headers["content-type"], /application\/json/);
+  const body = JSON.parse(res.body);
+  // Every hash the UI links must be a real 44-char NEAR transaction hash — the
+  // provenance panel must never render a placeholder.
+  for (const t of body.txs) assert.match(t.hash, /^[1-9A-HJ-NP-Za-km-z]{43,44}$/);
+  assert.ok(body.eventTx.CLOSED && body.eventTx.REOPENED);
+});
+

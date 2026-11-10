@@ -29,7 +29,7 @@ merchant closes until someone invests). Ledgertown is that loop, live on NEAR te
 | Economy evolves without a dev patch | Prices/stock/cash are contract state; closure + revival are on-chain events | **Done** |
 | Judged on the game loop | 15 healthy days → flood → insolvency → close → invest → reopen → recover | **Done** |
 | Merchant pricing rules in one readable file | `driver/agent.js` `decideForMe` (one pure function) | **Done** |
-| Show a merchant's reasoning | On-chain `last_decision` string, surfaced in the UI per shop | **Partial** (shown as text, not a hover tooltip) |
+| Show a merchant's reasoning | On-chain `last_decision`, surfaced per shop as an ACCEPTED/REJECTED tag plus a plain-language line | **Done** |
 | Fast-forward a week in a minute | `tick` advances one day; UI has **Advance one day** and **Fast-forward 7 days** (each day a separate real tx) | **Done** |
 | Items as NEP-245 multi-tokens | Items are contract-internal balances on one contract | **Gap** (one contract holds all items, but not via NEP-245) |
 | Social / email login, no popups | Local testnet key files; local play server | **Gap** (local harness, per Q-012) |
@@ -74,14 +74,18 @@ prove the state is live; the clicking happens locally.
 
 1. Open the public read-only view (**https://ledgertown.vercel.app/**) to show the live
    `town.ledgertown.testnet` state, then switch to the local play UI for the interaction.
-   Point at the four shops: each shows its own account, cash, stock, price and last
-   decision.
+   Point at the four shop panels: each shows its own NEAR account, cash against its
+   reserve, stock against its restock target, its sell/buy prices with margin, the
+   agent's recorded decision, and a plain-language risk line. Point at the **price
+   board** (cheapest quote marked) and the **scarcity strip**.
 2. Click **Gather iron**, then **Sell iron** to the smith. Show the cargo and credits
    change and the new hash appear under "Your transactions"; open it on the explorer.
 3. Click **Advance one day** a few times (or **Fast-forward 7 days**); show prices move
    as merchants restock and undercut each other. Point at the **Town ledger** events.
-4. Scroll the ledger to the recorded **`CLOSED` (day 22, cash −2)** then
-   **`REOPENED` (day 31, cash 198)** for the smith — the economy evolved on its own.
+4. Scroll to the **lifecycle timeline** and the ledger's recorded **`CLOSED`**
+   (day 22, cash −2) then **`REOPENED`** (day 31, cash 198) for the smith — the
+   economy evolved on its own. Both rows link to the real transactions; the
+   **On-chain provenance** panel lists the 14 verified txs that built today's town.
 5. Say the one line: *"Every number here is read from a real NEAR testnet contract, and
    every action is a real signed transaction."*
 
@@ -91,8 +95,8 @@ from the README) and show `demo-log.json` plus the explorer hashes.
 ## 5. Evidence already verified (see README "Evidence")
 
 - Contract `cargo test` — **11 passed**, incl. exact 30-day parity vs the reference.
-- `node --test tests/*.test.js` — **50 passed** (policy, failure detection, chain guard,
-  server guards, handler, town client, Vercel entry).
+- `node --test tests/*.test.js` — **62 passed** (policy, failure detection, chain guard,
+  server guards, handler, town client, the economy derivations the UI reads, Vercel entry).
 - Reference model — `feasibility/tests.py` **25/25**; `feasibility/exploits.py` **39/39**.
 - Live parity vs deployed `town.ledgertown.testnet` — **PASS, 120 rows, 0 mismatches**.
 - Lifecycle — `CLOSED` day 22 → `REOPENED` day 31, ending `open` (14 txs).
@@ -102,8 +106,9 @@ from the README) and show `demo-log.json` plus the explorer hashes.
   routes (`/api/action/<name>`) reach the handler (valid actions `503` read-only,
   owner-only/deposit `400`, invalid input `400`, oversized body `413`); all security
   headers present; browser console clean.
-- UI — no horizontal overflow at 320/390/768/1280/1440 px; text contrast ≥ AA; each
-  action links to its real explorer transaction.
+- UI — no horizontal overflow and no console errors at 320/390/768/1280/1440 px;
+  text contrast ≥ AA by measurement; each action and the CLOSED/REOPENED ledger rows
+  link to a real explorer transaction. Screenshots: `docs/screenshots/release-w*.png`.
 
 ## 6. Submission payload — values the human must supply
 
@@ -137,9 +142,9 @@ from their answers and sends only after they confirm. `website` must stay absent
 
 ## 8. Recommended small additions before the deadline
 
-1. **Merchant-reasoning tooltip** — turn the `last_decision` text into a hover tooltip
-   on each shop. Directly answers "show a merchant's reasoning"; ~1 hour. (The text is
-   already shown per shop; only the tooltip affordance is missing.)
+1. **Merchant-reasoning affordance** — *done*: each shop shows the contract's recorded
+   `last_decision` as an **ACCEPTED/REJECTED** tag with a plain-language line, and an
+   opt-in panel states the full policy and that the contract has the last word.
 
 Larger, optional, higher risk (disclose as gaps if not done): NEP-245 item tokens, and
 social/email login without key files. **Done already:** the fast-forward control and the

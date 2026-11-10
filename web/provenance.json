@@ -1,0 +1,88 @@
+{
+  "contract": "town.ledgertown.testnet",
+  "note": "Transactions that produced the town's current on-chain state (town.ledgertown.testnet, day 51). Every hash below was verified to resolve on NEAR testnet. These are historical \u2014 the town does not re-run them.",
+  "sender": "ledgertown.testnet",
+  "explorer": "https://testnet.nearblocks.io/txns/",
+  "txs": [
+    {
+      "label": "Owner reset the town to a clean baseline",
+      "kind": "reset",
+      "hash": "Gp2ZsTmRztcoYqoBBGoNnrYckCJkYapoSKcsHRtfzohk"
+    },
+    {
+      "label": "Owner disabled the automatic lifeline (so insolvency is real)",
+      "kind": "set_lifeline(false)",
+      "hash": "3bCsZ8Qyj949XyiJHkjusv6KTXvkLZ76RqSBRB7ifrrA"
+    },
+    {
+      "label": "Owner funded the player account",
+      "kind": "fund player 5.004 NEAR from owner",
+      "hash": "HbPbtsSmQ9oka9RDmKswSyXFjkhH5L1x66hY5pCgqtkB"
+    },
+    {
+      "label": "Player deposited 5 NEAR for 5,000 credits",
+      "kind": "player_deposit(5 NEAR)",
+      "hash": "Hndo2tVLWqWFAFJ2SF7DNZpxBpXdvx8xdianzYRJD65Y"
+    },
+    {
+      "label": "Settlement tick",
+      "kind": "tick (day 1)",
+      "hash": "3Q7y52xe34rqC46o76LxeQLEUFkamKo31oghAdXZcohJ"
+    },
+    {
+      "label": "Settlement ticks to day 15",
+      "kind": "tick (day 15)",
+      "hash": "5JvQCn4Pjj8cxiB4hd81icLjQenRkiyavxSRktw2pVzY"
+    },
+    {
+      "label": "Owner added a demand shock: iron demand falls to 15% (days 18\u201328)",
+      "kind": "add_shock iron demand x0.15 (18-28)",
+      "hash": "GJs6iehYSjanwmqzjRtvoUK4hwwYyJTBpiCEkfquANvg"
+    },
+    {
+      "label": "Player gathered and sold iron, then settled a day",
+      "kind": "day 16: gather+sell+tick",
+      "hash": "4XnC37b7zPtRU1dNvUZUMfbeSGjadxEjbdU75kSKqXq9"
+    },
+    {
+      "label": "Player tried to sell to the smith; the contract refused (no reserve). Day settled",
+      "kind": "day 20: gather (smith refused)+tick",
+      "hash": "vmrbveRhpYhuuSoWFej3SdVrRudXxLqoujxnsL9Ba9p"
+    },
+    {
+      "label": "Smith's cash fell below zero \u2014 the contract closed it on day 22",
+      "kind": "day 22: gather (smith refused)+tick",
+      "hash": "FDnw5DGBsqLEohD8b1kcUwBHkPaLjAND3KGJBPjgBFb6"
+    },
+    {
+      "label": "Settlement ticks; the demand shock ends on day 28",
+      "kind": "tick to day 31 (shock over)",
+      "hash": "DdRm2ypsy8zsR4xfkL1w4Wo5wBU1YvevaUMz1GjAzAEi"
+    },
+    {
+      "label": "Player invested 200 credits in the closed smith",
+      "kind": "player_invest(smith,200)",
+      "hash": "G3mSM6Bmgd4pVtudmV6uCYWa3MAmbVsYZUQ1LWpz5UWk"
+    },
+    {
+      "label": "The smith reopened on day 31 and settled its first day back",
+      "kind": "recovery tick (day 32)",
+      "hash": "EbPobZQSfBsK8sT7ABa93JEuQGKEpPUFDemc3WZweUUm"
+    },
+    {
+      "label": "Settlement ticks to day 51 \u2014 the town's current day",
+      "kind": "recovery tick (day 51)",
+      "hash": "2S8X5JfnaLiTuR1aEch1J9UKpVjbHTjjP2yZ1PxUbvL2"
+    }
+  ],
+  "eventTx": {
+    "CLOSED": {
+      "hash": "FDnw5DGBsqLEohD8b1kcUwBHkPaLjAND3KGJBPjgBFb6",
+      "note": "the tick that closed the smith (day 22)"
+    },
+    "REOPENED": {
+      "hash": "G3mSM6Bmgd4pVtudmV6uCYWa3MAmbVsYZUQ1LWpz5UWk",
+      "note": "the player_invest that reopened the smith (day 31)"
+    }
+  }
+}
