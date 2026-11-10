@@ -73,14 +73,33 @@ async function view(provider, method, args = {}) {
 }
 
 async function readState(provider) {
-  const [merchants, town, player, day, events] = await Promise.all([
+  const [merchants, town, day, events, model] = await Promise.all([
     view(provider, "list_merchants"),
     view(provider, "get_town"),
-    view(provider, "get_player"),
     view(provider, "get_day"),
     view(provider, "get_events", { from_id: 0 }),
+    readModel(provider),
   ]);
-  return { merchants, town, player, day, events };
+  return { merchants, town, day, events, model };
+}
+
+/** Which player model the deployed contract exposes. `player_model` is absent
+ *  on the original single-purse contract, so a failed call means "single". The
+ *  UI uses this to label ownership honestly and to gate per-account play. */
+async function readModel(provider) {
+  try {
+    const m = await view(provider, "player_model");
+    return typeof m === "string" ? m : "single";
+  } catch {
+    return "single";
+  }
+}
+
+/** One account's purse. A public on-chain read (no key, no write): the website
+ *  asks the server to read the connected account's own `Player` so the strict
+ *  CSP (`connect-src 'self'`) needs no direct browser-to-RPC connection. */
+async function readPlayer(provider, accountId) {
+  return view(provider, "get_player", { account: accountId });
 }
 
 /** Public, key-free read access. `endpoints` defaults to the public testnet pool. */
@@ -94,6 +113,7 @@ export async function createReadOnlyTown({
     contract: CONTRACT_ID,
     mode: "read-only",
     getState: () => readState(provider),
+    getPlayer: (accountId) => readPlayer(provider, accountId),
   };
 }
 
@@ -151,6 +171,7 @@ export async function createPlayTown({
     mode: "play",
     accountId,
     getState: () => readState(near.connection.provider),
+    getPlayer: (acct) => readPlayer(near.connection.provider, acct),
     // The ONLY actions the public server can sign. No deposit, no owner methods.
     tick: () => call("tick", {}),
     gather: ({ good, units }) => call("player_gather", { good, units: String(units) }),

@@ -10,6 +10,7 @@ import {
   validateAdvance,
   explainDecision,
   originAllowed,
+  isValidAccount,
   RateLimiter,
   SingleFlight,
 } from "./guard.js";
@@ -39,12 +40,28 @@ export function createHandler({
   config,
   actionLimiter = new RateLimiter({ limit: 20, windowMs: 60_000 }),
   advanceLimiter = new RateLimiter({ limit: 6, windowMs: 60_000 }),
+  playerLimiter = new RateLimiter({ limit: 60, windowMs: 60_000 }),
   singleFlight = new SingleFlight(),
+  stateTtlMs = 2000,
   recentTxs = [],
   now = () => Date.now(),
   log = () => {},
 }) {
   const readOnly = config.mode !== "play";
+
+  // A short cache of the town read. `/api/state` is polled by every open tab;
+  // without this, a burst of visitors exhausts the free public RPC's rate
+  // limit. The value is the SAME real state, at most `stateTtlMs` old — never
+  // fabricated, never a substitute for a live read on an action. Set
+  // `stateTtlMs = 0` to disable (tests do).
+  let stateCache = null; // { at, value }
+  async function readStateCached() {
+    const t = now();
+    if (stateTtlMs > 0 && stateCache && t - stateCache.at < stateTtlMs) return stateCache.value;
+    const value = await town.getState();
+    stateCache = { at: t, value };
+    return value;
+  }
 
   function headers(extra = {}) {
     return { ...SECURITY_HEADERS, ...extra };
@@ -102,16 +119,22 @@ export function createHandler({
   }
 
   function publicState(state) {
+    const townTuple = state.town || [];
+    // `get_town` returns (day, merchantCash, openCount, playerPurseCount).
+    // A town with the per-account upgrade reports a purse count; the original
+    // single-purse contract reports the one shared purse's cash. We surface the
+    // raw tuple and let the UI label it honestly either way.
     return {
       contract: town.contract,
       mode: config.mode,
-      // The contract stores ONE shared Player, not per-visitor state. The UI
-      // must say so honestly; this flag is what drives that label.
-      sharedPlayer: true,
+      // "per-account" once the upgrade is live; "single" on the original
+      // contract, which still holds ONE shared purse. The UI labels ownership
+      // honestly from this and never implies per-visitor custody either way.
+      model: state.model || "single",
+      sharedPlayer: (state.model || "single") !== "per-account",
       canAct: !readOnly,
       day: state.day,
-      town: state.town,
-      player: state.player,
+      town: townTuple,
       merchants: (state.merchants || []).map((m) => ({
         ...m,
         decision: explainDecision(m.last_decision),
@@ -253,8 +276,30 @@ export function createHandler({
         });
       }
       if (req.method === "GET" && pathname === "/api/state") {
-        const state = await town.getState();
+        const state = await readStateCached();
         return send(res, 200, { ok: true, ...publicState(state) });
+      }
+      if (req.method === "GET" && pathname === "/api/player") {
+        // Public, key-free read of ONE account's purse (the connected wallet's
+        // own). Read-only by nature: it is a contract view, never a write.
+        const account = url.searchParams.get("account") || "";
+        if (!isValidAccount(account)) {
+          return send(res, 400, { ok: false, error: "invalid account id" });
+        }
+        const rl = playerLimiter.check(clientKey(req));
+        if (!rl.ok) {
+          return send(
+            res,
+            429,
+            { ok: false, error: "rate limit reached; please wait a moment" },
+            { "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)) }
+          );
+        }
+        if (typeof town.getPlayer !== "function") {
+          return send(res, 501, { ok: false, error: "player reads are not available here" });
+        }
+        const player = await town.getPlayer(account);
+        return send(res, 200, { ok: true, account, player: player ?? null });
       }
       if (req.method === "POST" && pathname === "/api/advance") {
         return await handleAdvance(req, res);
@@ -267,8 +312,13 @@ export function createHandler({
       }
       return send(res, 405, { ok: false, error: "method not allowed" });
     } catch (e) {
-      const code = e?.statusCode || 400;
-      if (code >= 500) log(`error: ${e?.stack || e}`);
+      // Validation errors carry their own 4xx status. Everything else that
+      // escapes here is an upstream failure (RPC unreachable, rate-limited,
+      // timed out) — report 502 so a client never reads a transient outage as
+      // a bad request, and never as success.
+      const explicit = e?.statusCode;
+      const code = explicit && explicit >= 400 && explicit < 500 ? explicit : 502;
+      log(`error: ${e?.stack || e}`);
       return send(res, code, { ok: false, error: cleanError(e) });
     }
   };

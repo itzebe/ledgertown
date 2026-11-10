@@ -39,18 +39,25 @@ requirements; Q-012 allows a local-only demo with a reproducible README.
 
 ### Public hosting status (read this before the demo)
 
-The project is deployed read-only at **https://ledgertown.vercel.app/** (Vercel Hobby
-plan, free). It serves the real UI and live `town.ledgertown.testnet` state with **no
-signing keys loaded**, so every figure and explorer link is real, but the trade and
-fast-forward buttons are disabled: valid play/advance requests return `503`, invalid
-input `400`, oversized bodies `413`, and owner-only/deposit routes are refused with
-`400`.
+The project is deployed at **https://ledgertown.vercel.app/** (Vercel Hobby plan, free).
+The hosted server runs **read-only with no keys loaded**: it serves the real UI and live
+`town.ledgertown.testnet` state, so every figure and explorer link is real, and it proxies
+the key-free `/api/player` purse read. Invalid input returns `400`, oversized bodies
+`413`, and owner-only/`deposit` routes `400`.
 
-Public play mode is deliberately **not** enabled: the contract has a single shared
-`Player` purse, so a public play deployment would put one funded shared signer behind
-anonymous visitors. The **interactive** demo (gather / sell / advance / invest) is run
-locally in play mode with a throwaway demo key, exactly as in §4 below; the hosted site
-is the key-free read-only view of the same contract.
+Play is **non-custodial and does not need a server signer**. The player connects their own
+NEAR testnet wallet (e.g. Freighter); the wallet extension signs each action in the
+browser and the site never sees the key. The only methods the browser will ever ask a
+wallet to sign are `player_init`, `player_gather`, `player_buy_from`, `player_sell_to`,
+`player_invest` and `tick` — never `deposit` or an owner-only method.
+
+Personal play needs the **per-account** contract build. The site detects the model at
+runtime (the `player_model` view) and **degrades honestly**: until the owner deploys the
+upgrade it says so in the play band and keeps the trade buttons disabled, while the
+market stays fully live. The upgrade is proven safe first —
+`node scripts/verify-migration.js` decodes the live state with the old layout and prints
+`EXACT MATCH`; the owner then runs `node driver/upgrade.js` (deploy wasm + `migrate()`),
+which preserves every merchant, event and shock. No website key is ever required.
 
 ## 3. NEAR's role (say this plainly in the demo post)
 
@@ -67,40 +74,47 @@ NEAR is the **authoritative ledger and the source of the agents' autonomy**:
 
 ## 4. Judge demo script (60 seconds)
 
-The **interactive** demo (gather / sell / advance / invest) runs in **local play mode**
-(§2 above): the hosted site is the key-free read-only view of the same contract, so its
-trade and fast-forward buttons are intentionally disabled. The public URL is shown to
-prove the state is live; the clicking happens locally.
+The hosted site is live at **https://ledgertown.vercel.app/**. It is fully playable once
+the per-account upgrade is deployed: a judge can connect a NEAR testnet wallet and act
+without any server keys. Until that upgrade is live the play band says so and the trade
+buttons stay disabled, while the market stays fully live and readable.
 
-1. Open the public read-only view (**https://ledgertown.vercel.app/**) to show the live
-   `town.ledgertown.testnet` state, then switch to the local play UI for the interaction.
-   Point at the four shop panels: each shows its own NEAR account, cash against its
-   reserve, stock against its restock target, its sell/buy prices with margin, the
-   agent's recorded decision, and a plain-language risk line. Point at the **price
-   board** (cheapest quote marked) and the **scarcity strip**.
-2. Click **Gather iron**, then **Sell iron** to the smith. Show the cargo and credits
+1. Open **https://ledgertown.vercel.app/** and point at the four shop panels: each shows
+   its own NEAR account, cash against its reserve, stock against its restock target, its
+   sell/buy prices with margin, the agent's recorded decision, and a plain-language risk
+   line. Point at the **price board** (cheapest quote marked) and the **scarcity strip**.
+2. Connect a NEAR testnet wallet. The **play band** shows your net worth and three
+   challenges read from the live town (an arbitrage, a rescue, or a free gather).
+3. Click **Gather iron**, then **Sell iron** to the smith. Show the cargo and credits
    change and the new hash appear under "Your transactions"; open it on the explorer.
-3. Click **Advance one day** a few times (or **Fast-forward 7 days**); show prices move
-   as merchants restock and undercut each other. Point at the **Town ledger** events.
-4. Scroll to the **lifecycle timeline** and the ledger's recorded **`CLOSED`**
+4. Click **Advance one day** a few times; show prices move as merchants restock and
+   undercut each other. Point at the **Town ledger** events.
+5. Scroll to the **lifecycle timeline** and the ledger's recorded **`CLOSED`**
    (day 22, cash −2) then **`REOPENED`** (day 31, cash 198) for the smith — the
    economy evolved on its own. Both rows link to the real transactions; the
    **On-chain provenance** panel lists the 14 verified txs that built today's town.
-5. Say the one line: *"Every number here is read from a real NEAR testnet contract, and
-   every action is a real signed transaction."*
+6. Say the one line: *"Every number here is read from a real NEAR testnet contract, and
+   every action is a real transaction your own wallet signs."*
 
 Fallback if testnet is unreachable: run `node driver/demo.js` locally (reproducible
 from the README) and show `demo-log.json` plus the explorer hashes.
 
 ## 5. Evidence already verified (see README "Evidence")
 
-- Contract `cargo test` — **11 passed**, incl. exact 30-day parity vs the reference.
-- `node --test tests/*.test.js` — **62 passed** (policy, failure detection, chain guard,
-  server guards, handler, town client, the economy derivations the UI reads, Vercel entry).
+- Contract `cargo test` — **20 passed**, incl. per-account purse isolation, owner-only
+  migration, and exact 30-day parity vs the reference.
+- `node --test tests/*.test.js` — **90 passed** (policy, failure detection, chain guard,
+  server guards, handler incl. `/api/player`, town client, the economy derivations the UI
+  reads, the game logic, the non-custodial wallet layer, Vercel entry).
 - Reference model — `feasibility/tests.py` **25/25**; `feasibility/exploits.py` **39/39**.
 - Live parity vs deployed `town.ledgertown.testnet` — **PASS, 120 rows, 0 mismatches**.
 - Lifecycle — `CLOSED` day 22 → `REOPENED` day 31, ending `open` (14 txs).
 - Merchant agents — 8 real signed `merchant_decide` txs, accepted and recorded.
+- Migration safety — `scripts/verify-migration.js` decodes the live `STATE` (2922 bytes)
+  with the old layout: **EXACT MATCH**, so the per-account upgrade cannot corrupt state.
+- Non-custodial play — headless-browser E2E with an injected wallet: `player_init`,
+  `tick`, `player_gather`, `player_buy_from`, `player_sell_to` each sign exactly one
+  action; no owner or `deposit` method is ever signable.
 - Public deployment — `https://ledgertown.vercel.app/` read-only: `/healthz` and
   `/api/state` serve live day-51 state over the public internet with no keys; nested
   routes (`/api/action/<name>`) reach the handler (valid actions `503` read-only,
@@ -138,14 +152,20 @@ from their answers and sends only after they confirm. `website` must stay absent
       (judges read the default branch).
 - [ ] Demo video recorded and X post published by the human (`@NEARProtocol`, `#NEARHackathon`).
 - [ ] Payload printed and confirmed by the human; sent once.
-- [x] Hosted demo live (read-only) at `https://ledgertown.vercel.app/`; keep up through 2026-11-18.
+- [ ] **Owner action:** run `node scripts/verify-migration.js` (expects `EXACT MATCH`)
+      then `node driver/upgrade.js` to activate non-custodial per-account play on the
+      live contract. Until then the hosted site is live and readable but not playable.
+- [x] Hosted demo live at `https://ledgertown.vercel.app/`; keep up through 2026-11-18.
 
 ## 8. Recommended small additions before the deadline
 
 1. **Merchant-reasoning affordance** — *done*: each shop shows the contract's recorded
    `last_decision` as an **ACCEPTED/REJECTED** tag with a plain-language line, and an
    opt-in panel states the full policy and that the contract has the last word.
+2. **Playable game loop** — *done*: a play band with wallet connect, live net worth, and
+   three challenges derived from the live town; each challenge button signs the right
+   action with the player's own wallet (non-custodial).
 
 Larger, optional, higher risk (disclose as gaps if not done): NEP-245 item tokens, and
-social/email login without key files. **Done already:** the fast-forward control and the
-MIT `LICENSE`.
+social/email login without key files. **Done already:** the fast-forward control, the
+per-account purses, and the MIT `LICENSE`.

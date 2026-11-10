@@ -83,6 +83,17 @@ export function toInt(v) {
   return Number.isSafeInteger(n) ? n : null;
 }
 
+/** A plausible NEAR account id: 2..64 chars, lowercase alphanumeric words
+ *  separated by `-`/`_`/`.`, each word starting and ending alphanumeric.
+ *  Used only to bound the `/api/player` lookup argument; the value is passed
+ *  as a view argument (never a command), so this is a shape check, not a
+ *  security boundary. */
+export function isValidAccount(v) {
+  if (typeof v !== "string") return false;
+  if (v.length < 2 || v.length > 64) return false;
+  return /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/.test(v);
+}
+
 /** Translate a contract `last_decision` string into plain language, WITHOUT
  *  inventing reasoning the chain did not record. The contract writes strings
  *  shaped like `ACCEPTED set_markup 2000bp -> 2000bp` or

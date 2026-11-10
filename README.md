@@ -152,10 +152,28 @@ npm run serve
 The server never reads `keys/identities.json`; the operator's owner and merchant keys
 must not exist in a public deployment.
 
-> **Shared player state.** The contract stores ONE shared `Player`, not per-visitor
-> state. Everyone who plays trades from the same purse. The UI states this plainly;
-> giving each visitor an independent purse would require a contract change (a separate
-> testnet migration), which is out of scope here.
+### Playing (non-custodial, in the browser)
+
+Ledgertown is a game, and the hosted site is playable **without the server ever
+holding a key**. When a visitor connects a NEAR testnet wallet (for example
+Freighter), the browser builds each action and the **wallet extension signs it** —
+the site never sees the key. The player's own purse is read back through
+`/api/player?account=…` (a key-free contract view). There is no shared signer and no
+`deposit` step: gathering is free and credits come from trading.
+
+The only methods the browser will ever ask a wallet to sign are
+`player_init`, `player_gather`, `player_buy_from`, `player_sell_to`, `player_invest`
+and `tick`. `deposit` (which attaches NEAR) and every owner-only method (`reset`,
+`add_shock`, `owner_withdraw`, `set_lifeline_enabled`, `seed_merchant`) are not in that
+list, so the interface cannot even offer them (`web/wallet.js`, `tests/wallet.test.js`).
+
+> **Player model.** Personal play needs the **per-account** contract build, where each
+> account owns its own purse (`players: BTreeMap<AccountId, Player>`) instead of the one
+> shared `Player`. The site detects this at runtime via the `player_model` view and
+> **degrades honestly**: until the owner deploys the upgrade it says so in the play band
+> and keeps the trade buttons disabled, while the market stays fully live and readable.
+> The migration preserves all existing state — `scripts/verify-migration.js` decodes the
+> live contract with the old layout and reports `EXACT MATCH` before you upgrade.
 
 ### Public deployment (Vercel, free Hobby plan)
 
@@ -189,34 +207,47 @@ in **Project → Settings → Environment Variables** only if you accept that
 trade-off. Use a **dedicated** testnet account holding only a little testnet
 NEAR — never a mainnet, owner, or merchant key.
 
-#### Public play mode is off by design
+#### The server stays read-only; play is signed by the player's wallet
 
-The contract stores ONE shared `Player` purse (there is no per-visitor state).
-Exposing `play` mode publicly would mean **one funded shared demo signer behind
-anonymous visitors**, so any visitor could spend the town's shared credits and
-the demo account's testnet NEAR, and could race each other through a shared
-purse. That is unsafe to expose, so the public deployment runs **read-only**:
+The hosted server runs in **read-only mode** and holds **no keys**. It serves the UI,
+reads live `town.ledgertown.testnet` state over public testnet RPC, and proxies the
+key-free `/api/player` purse read. That is safe to expose to anyone.
 
-- The UI and every figure are real, read from `town.ledgertown.testnet` over
-  public testnet RPC, with **no keys loaded at all**.
-- Every trade button is disabled in the UI and every action endpoint returns
-  `503` with a plain explanation.
-- `deposit` (which attaches NEAR) and every owner-only method (`reset`,
-  `add_shock`, `owner_withdraw`, `set_lifeline_enabled`, `seed_merchant`) are
-  never routed at all — they return `400`.
+Play does **not** require enabling a server signer. It is **non-custodial**: the player
+connects their own NEAR testnet wallet, and the wallet extension signs each action in
+the browser. There is no funded shared signer behind anonymous visitors, so the old
+trade-off (one shared signer in front of the public) no longer applies.
 
-To *play*, run the server locally in play mode with your own throwaway demo key
-(the `npm run serve` command above), or self-host and accept the shared-signer
-trade-off. Making play genuinely public and safe needs a contract change (a
-per-visitor purse), which is out of scope for this release and is disclosed as a
-gap in `docs/HACKATHON_SUBMISSION.md`.
+- The server keeps `deposit` (which attaches NEAR) and every owner-only method
+  (`reset`, `add_shock`, `owner_withdraw`, `set_lifeline_enabled`, `seed_merchant`)
+  unrouted — they return `400`.
+- The browser will only ever ask a wallet to sign the six player methods above, so
+  owner methods are unreachable even with a connected wallet.
+- The optional server-side `play` mode still exists for local demos with a throwaway
+  demo key, but it is **not** how the public site plays.
+
+Personal play needs the **per-account** contract build (see "Player model" above). Until
+the owner deploys it, the play band says so plainly and the trade buttons stay disabled —
+the market itself is fully live and readable either way.
+
+To activate per-account play on the live contract, the owner runs (once, with their
+owner key):
+
+```bash
+node scripts/verify-migration.js   # prints EXACT MATCH against live state
+node driver/upgrade.js             # deploys the new wasm + calls migrate()
+```
+
+`driver/upgrade.js` is owner-only and idempotent-safe: it deploys the wasm and calls
+`migrate()`, which hands the old shared purse to the owner's own account and leaves every
+merchant, event and shock untouched. No keys are ever needed by the website.
 
 > **Serverless caveat (stated honestly).** The in-memory rate limits and the
 > single-flight lock in `web/handler.js` are **per instance**, not global: Vercel
 > may run several warm instances, and a cold start resets them. They bound
 > accidental flooding and duplicate fast-forwards on one instance; they are not a
 > global guarantee. This is acceptable because the public site is read-only, and
-> any future play deployment must not rely on them as the only control.
+> play actions are signed (and rate-limited) by the player's own wallet.
 
 ## How to read the interface
 
@@ -229,6 +260,12 @@ derivations are unit-tested (`tests/economy.test.js`).
   (the line at which it stops buying stock), **stock** against `2 × base demand`
   (the restock target), the **sell** price with its margin over average cost, and
   the **buy** price. A plain line states the shop's health.
+- **Your seat in the town** — the play band. Connect a NEAR testnet wallet and the
+  band shows your **net worth** (credits + cargo at reference prices) and three
+  **challenges derived from the live town**: an **arbitrage** (a good one shop sells
+  below what another pays), a **rescue** (revive a closed shop, or supply one below
+  its reserve), and — when your purse is empty — a free **gather** to start. Each
+  challenge has buttons that sign the right action with your wallet.
 - **The agent's decision** — each shop shows the contract's recorded
   `last_decision` in plain words (**ACCEPTED** / **REJECTED**). The merchant only
   *proposes*; the contract has the last word.
@@ -287,10 +324,10 @@ the outcome in the merchant's `last_decision`.
 Offline (no network, no account required):
 
 ```bash
-npm run test:contract     # 11 tests incl. exact 30-day parity vs the reference
-npm run test:agent        # 62 unit tests: merchant policy, failure detection, chain
+npm run test:contract     # 20 tests: per-account purses, isolation, migration, parity
+npm run test:agent        # 90 unit tests: merchant policy, failure detection, chain
                           # guard, server guards, handler, town client, economy
-                          # derivations, Vercel entry
+                          # derivations, game logic, wallet layer, Vercel entry
 python3 feasibility/tests.py       # 25 invariants / determinism tests
 python3 feasibility/exploits.py    # 39 adversarial exploit probes
 ```
@@ -308,10 +345,12 @@ node scripts/verify-parity.js   # 30 days on the deployed contract vs golden (12
 
 Verified on the live deployment (`town.ledgertown.testnet`, NEAR testnet):
 
-- Contract: `cargo test` — **11 passed**, including exact 30-day parity.
-- Unit tests: `node --test tests/*.test.js` — **62 passed** (policy, failure
-  detection, chain guard, server guards, handler, town client, the economy
-  derivations the UI reads, and the Vercel entry).
+- Contract: `cargo test` — **20 passed** (per-account purse isolation, owner-only
+  migration, exact 30-day parity).
+- Unit tests: `node --test tests/*.test.js` — **90 passed** (policy, failure
+  detection, chain guard, server guards, handler incl. the `/api/player` endpoint,
+  town client, the economy derivations the UI reads, the game logic, the
+  non-custodial wallet layer, and the Vercel entry).
 - Reference model: `feasibility/tests.py` — **25/25 passed**; `feasibility/exploits.py`
   — **39/39 passed**.
 - Public deployment: `https://ledgertown.vercel.app/` — read-only, serves live
@@ -320,6 +359,14 @@ Verified on the live deployment (`town.ledgertown.testnet`, NEAR testnet):
   (owner-only and `deposit` → `400`, valid actions → `503` read-only, invalid input
   → `400`, oversized body → `413`); all security headers present; browser console
   clean. (Re-verified against the released deployment from the merged `main`.)
+- Player model: `scripts/verify-migration.js` decodes the live `STATE` (2922 bytes)
+  with the old layout and reports **EXACT MATCH**, so the per-account upgrade is
+  proven safe against the real contract before the owner runs `driver/upgrade.js`.
+- Non-custodial play: the wallet layer is unit-tested (`tests/wallet.test.js`) and
+  driven end-to-end in a headless browser with an injected fake wallet — connect,
+  then `player_init` / `tick` / `player_gather` / `player_buy_from` / `player_sell_to`
+  each sign exactly one action for `town.ledgertown.testnet`, and no owner or
+  `deposit` method is ever signable.
 - Live parity: `scripts/verify-parity.js` — **PASS, 120 rows, 0 mismatches** against the
   deployed `town.ledgertown.testnet` (reset + 30 ticks, every merchant every day).
 - Lifecycle: `driver/demo.js` produced a `CLOSED` (day 22, cash −2) then `REOPENED`
