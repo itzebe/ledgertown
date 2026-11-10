@@ -1,10 +1,19 @@
-// Ledgertown UI. Served as an external file so the page can use a strict
-// Content-Security-Policy without 'unsafe-inline' for scripts.
+// Ledgertown interface. Served as an external module so the page can use a
+// strict Content-Security-Policy without 'unsafe-inline' for scripts.
+//
+// The interface is a *reading* of real contract state: every figure comes from
+// /api/state (which reads `final`-finality views of town.ledgertown.testnet),
+// and the economic signals are derived purely from those numbers (see
+// economy.js). Nothing here invents a balance, a price or a decision.
+import { GOODS, marketRead } from "./economy.js";
+
 const EXPLORER = "https://testnet.nearblocks.io/txns/";
 let state = null;
+let read = null;            // derived economic read of `state`
 let prevMerchants = null;   // previous day's snapshot, for day-over-day deltas
 let lastDay = null;
 let focusMerchant = null;   // merchant whose transactions the player last acted on
+let provenance = null;
 
 function toast(msg, err){
   const t = document.getElementById("toast");
@@ -12,12 +21,11 @@ function toast(msg, err){
   clearTimeout(t._h); t._h = setTimeout(()=>{ t.className="toast"; }, 4200);
 }
 function money(n){ return (n??0).toLocaleString(); }
+function esc(s){ return String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
-// Persistent, actionable error banner (distinct from the transient toast).
 function setBanner(msg){
   const el = document.getElementById("banner-slot");
-  if(!msg){ el.innerHTML = ""; return; }
-  el.innerHTML = `<div class="banner" role="alert">${msg}</div>`;
+  el.innerHTML = msg ? `<div class="banner" role="alert">${msg}</div>` : "";
 }
 
 // Delta since the previous day: the "what changed since yesterday" signal.
@@ -25,8 +33,7 @@ function delta(cur, prev){
   if(prev == null || cur == null) return "";
   const d = cur - prev;
   if(d === 0) return `<span class="delta flat">·</span>`;
-  const cls = d > 0 ? "up" : "down";
-  return `<span class="delta ${cls}">${d>0?"▲":"▼"}${Math.abs(d)}</span>`;
+  return `<span class="delta ${d>0?"up":"down"}">${d>0?"▲":"▼"}${Math.abs(d)}</span>`;
 }
 
 async function api(method, path, body){
@@ -39,77 +46,144 @@ async function api(method, path, body){
   return j;
 }
 
-function prevOf(id){
-  return prevMerchants ? prevMerchants.find(p => p.id === id) : null;
+function prevOf(id){ return prevMerchants ? prevMerchants.find(p => p.id === id) : null; }
+
+// A thin accounting meter: fill = value/cap, with a tick marking the target.
+function meter(ratio, cls, tickRatio){
+  const pct = Math.max(0, Math.min(1, ratio)) * 100;
+  const tick = tickRatio != null ? `<i class="tick" style="left:${Math.max(0,Math.min(1,tickRatio))*100}%"></i>` : "";
+  return `<div class="meter ${cls}"><span style="width:${pct}%"></span>${tick}</div>`;
 }
 
-// Plain-language rendering of the contract's real last_decision. The server
-// already translated it (state.merchants[].decision); we never invent reasoning.
+// Plain-language rendering of the contract's real last_decision.
 function decisionBlock(m){
   const d = m.decision || {status:"none", plain:"No agent decision recorded yet."};
   const tag = d.status === "accepted" ? "accepted"
             : d.status === "rejected" ? "rejected"
             : d.status === "recorded" ? "recorded" : "no decision";
-  return `<div class="decision ${d.status}"><span class="tag">${tag}</span>${d.plain}</div>`;
+  return `<div class="decision ${d.status}"><span class="tag">${tag}</span><span class="why">${esc(d.plain)}</span></div>`;
 }
 
 function renderModeNote(){
   if(state.canAct){ setBanner(""); return; }
-  document.getElementById("banner-slot").innerHTML = `<div class="mode-note"><b>Read-only preview.</b> This deployment serves live NEAR testnet state without holding any signing keys, so the trade buttons are disabled here. The state, the ledger and every explorer link below are real. To play, run the server in play mode with a demo key (see the README).</div>`;
-  // Read-only: no signing, so no action button can work. Disable them honestly
-  // instead of letting a click fail silently.
+  document.getElementById("banner-slot").innerHTML =
+    `<div class="mode-note"><b>Read-only preview.</b> This deployment serves live NEAR
+     testnet state without holding any signing keys, so the trade buttons are disabled
+     here. Every figure, the ledger and every explorer link are real. To play, run the
+     server in play mode with a demo key (see the README).</div>`;
   document.querySelectorAll(".gather, #advance, #advance7").forEach(b=>{
     b.disabled = true; b.title = "Read-only deployment — actions are disabled here";
   });
 }
 
-function renderStalls(){
-  const el = document.getElementById("stalls");
+function renderPulse(){
+  const s = read.summary;
+  document.getElementById("p-open").textContent = `${s.open}/${s.total}`;
+  document.getElementById("p-cash").textContent = money(s.cash);
+  document.getElementById("p-player").textContent = money(state.player.cash);
+  const sc = read.scarcity;
+  document.getElementById("p-scarcity").innerHTML = GOODS.map(({good}) => {
+    const x = sc[good];
+    const label = x.verdict === "none" ? "none left"
+      : x.verdict === "scarce" ? "scarce"
+      : x.verdict === "tight" ? "tight"
+      : x.verdict === "glut" ? "glut"
+      : "stocked";
+    const cover = x.daysOfCover == null ? "" : `${x.daysOfCover.toFixed(1)}d cover`;
+    return `<span class="chip ${x.verdict}" title="${good}: ${x.stock} units across ${x.shops} shop(s); base demand ${x.dbase}/day; ${cover}">
+      <span class="g">${good}</span><span class="m num">${x.stock}u</span><span class="v">${label}</span></span>`;
+  }).join("");
+}
+
+function renderMarket(){
+  const el = document.getElementById("market");
   el.innerHTML = "";
   for(const m of state.merchants){
-    const good = m.specialty;
-    const inv = m.inventory?.[good] ?? 0;
-    const list = m.list_price?.[good];
-    const bid = m.bid_price?.[good];
+    const r = read.merchants[m.id];
     const p = prevOf(m.id);
-    const pInv = p ? (p.inventory?.[good] ?? 0) : null;
-    const pList = p ? (p.list_price?.[good] ?? null) : null;
     const pCash = p ? p.cash : null;
+    const pInv = p ? (p.inventory?.[m.specialty] ?? 0) : null;
+    const pList = p ? (p.list_price?.[m.specialty] ?? null) : null;
     const closed = m.state === "closed";
     const ro = state.canAct ? "" : "disabled";
-    // Contextual actions: a closed shop can only be revived; an open shop trades.
+
+    const stateClass = closed ? "closed" : (m.cash < 0 ? "insolvent" : "open");
+    // cash instrument: meter against 4x reserve, tick at the reserve line (1x).
+    const cashCls = r.health === "healthy" ? "good" : r.health === "thin" ? "warn" : "bad";
+    const cashRatio = r.cashRatio == null ? 0 : r.cashRatio / 4;
+    const cashTick = 0.25;
+    // stock instrument: meter against 2x target, tick at the target (1x).
+    const stockCls = r.stockRatio == null ? "" : (r.stockRatio < 0.5 || r.stockRatio > 2) ? "warn" : "good";
+    const stockPct = r.stockRatio == null ? 0 : Math.min(1, r.stockRatio / 2);
+
     const actions = closed
       ? `<div class="actions">
-           <span class="cap" style="align-self:center">Revive</span>
-           <input type="number" value="200" min="1" id="u-${m.id}" />
+           <span class="cap" style="align-self:center">Revive · needs ≥ ${money(r.reserve)}</span>
+           <input type="number" value="${Math.max(1, r.reserve)}" min="1" id="u-${m.id}" aria-label="credits to invest in ${m.name}" />
            <button class="primary" data-invest="${m.id}" ${ro}>Invest to reopen</button>
          </div>`
       : `<div class="actions">
            <span class="cap" style="align-self:center">units</span>
-           <input type="number" value="1" min="1" id="u-${m.id}" />
-           <button data-buy="${m.id}" ${ro}>Buy ${good}</button>
-           <button data-sell="${m.id}" ${ro}>Sell ${good}</button>
+           <input type="number" value="1" min="1" id="u-${m.id}" aria-label="units for ${m.name}" />
+           <button data-buy="${m.id}" ${ro}>Buy ${m.specialty}</button>
+           <button data-sell="${m.id}" ${ro}>Sell ${m.specialty}</button>
          </div>`;
-    const stall = document.createElement("div");
-    stall.className = "stall";
-    stall.innerHTML = `
-      <div class="who">
-        <div class="nm">${m.name}${m.reopened_count ? `<span class="recovered" title="Times revived by investment">revived ×${m.reopened_count}</span>` : ""}</div>
-        <div class="sp">${good}</div>
-        <div class="acct">${m.account}</div>
-      </div>
-      <div>
-        <div class="figs">
-          <div class="fig"><div class="k">Cash</div><div class="v num">${money(m.cash)}${delta(m.cash, pCash)}</div></div>
-          <div class="fig"><div class="k">Stock</div><div class="v num">${inv}${delta(inv, pInv)}</div></div>
-          <div class="fig"><div class="k">Sells at</div><div class="v num">${list==null?"—":list}${list!=null?delta(list,pList):""}</div></div>
-          <div class="fig"><div class="k">Buys at</div><div class="v num">${bid==null?"—":bid}</div></div>
-          <div class="fig"><div class="k">State</div><div class="v"><span class="state ${m.state}">${m.state}</span></div></div>
+
+    const shop = document.createElement("article");
+    shop.className = "shop " + stateClass;
+    shop.setAttribute("aria-label", `${m.name}, ${m.specialty} shop, ${m.state}`);
+    shop.innerHTML = `
+      <div class="top">
+        <div>
+          <div class="nm">${esc(m.name)}<span class="sp">${m.specialty}</span>${m.reopened_count ? `<span class="recovered" title="Times revived by investment">revived ×${m.reopened_count}</span>`:""}</div>
+          <div class="acct" title="Real NEAR testnet account that operates this shop">${esc(m.account)}</div>
         </div>
-          ${decisionBlock(m)}
-        ${actions}
-      </div>`;
-    el.appendChild(stall);
+        <span class="state ${stateClass}">${closed ? "closed" : m.state}</span>
+      </div>
+      <div class="instruments">
+        <div class="inst">
+          <div class="cap">Cash ${delta(m.cash, pCash)}</div>
+          <div class="v num">${money(m.cash)}</div>
+          ${meter(cashRatio, cashCls, cashTick)}
+          <div class="sub">reserve ${money(r.reserve)}</div>
+        </div>
+        <div class="inst">
+          <div class="cap">Stock ${delta(r.inv, pInv)}</div>
+          <div class="v num">${r.inv}</div>
+          ${meter(stockPct, stockCls, 0.5)}
+          <div class="sub">target ${r.target}</div>
+        </div>
+        <div class="inst">
+          <div class="cap">Sells at ${delta(r.list, pList)}</div>
+          <div class="v num">${r.list==null?"—":r.list}</div>
+          <div class="sub ${r.marginPct!=null?(r.marginPct>=0?"pos":"neg"):""}">${r.marginPct!=null?`${r.marginPct>=0?"+":""}${r.marginPct}% over cost`:"—"}</div>
+        </div>
+        <div class="inst">
+          <div class="cap">Buys at</div>
+          <div class="v num">${r.bid==null?"—":r.bid}</div>
+          <div class="sub">avg cost ${r.avgCost}</div>
+        </div>
+      </div>
+      ${decisionBlock(m)}
+      <div class="risk ${read.risk[m.id].level}">${esc(read.risk[m.id].text)}</div>
+      ${actions}`;
+    el.appendChild(shop);
+  }
+}
+
+function renderBoard(){
+  const el = document.getElementById("board");
+  el.innerHTML = "";
+  for(const {good, dbase} of GOODS){
+    const quotes = read.board[good] || [];
+    const row = document.createElement("div");
+    row.className = "brow";
+    const qhtml = quotes.length
+      ? quotes.map(q => `<span class="q ${q.cheapest?"cheap":""} ${q.dearest?"dear":""}" title="${esc(q.name)} sells ${good} at ${q.price}${q.bid!=null?`; buys at ${q.bid}`:""}">
+          <span class="who">${esc(q.name)}</span><span class="p num">${q.price}</span></span>`).join("")
+      : '<span class="muted" style="font-size:12px">no open shop quotes this good</span>';
+    row.innerHTML = `<div class="gname">${good}<span class="dc">${dbase}/day</span></div><div class="quotes">${qhtml}</div>`;
+    el.appendChild(row);
   }
 }
 
@@ -123,6 +197,36 @@ function renderPurse(){
     : '<span class="muted">empty</span>';
 }
 
+function kindClass(kind){
+  if(/CLOSED|INSOLVENT/.test(kind)) return "close";
+  if(/REOPEN|LIFELINE/.test(kind)) return "reopen";
+  return "";
+}
+
+function renderTimeline(){
+  const el = document.getElementById("timeline");
+  if(!el) return;
+  const evs = state.events || [];
+  // Milestones are the real lifecycle events the contract recorded — nothing is
+  // fabricated. Start and "now" always frame the real span.
+  const milestones = evs
+    .filter(e => /CLOSED|REOPENED|LIFELINE/.test(e.kind))
+    .sort((a,b) => a.day - b.day);
+  const marks = [];
+  if(evs.length) marks.push({ day: 1, cls: "", v: "opened", sub: "town seeded" });
+  for(const e of milestones){
+    const cls = e.kind === "CLOSED" ? "bad" : "ok";
+    marks.push({ day: e.day, cls, v: `${e.kind.toLowerCase()} ${e.merchant}`, sub: `cash ${e.value}` });
+  }
+  marks.push({ day: state.day, cls: "now", v: "today", sub: `day ${state.day}` });
+  el.innerHTML = marks.map(m => `
+    <div class="tl ${m.cls}">
+      <div class="dlbl">day ${m.day}</div>
+      <div class="tlv">${esc(m.v)}</div>
+      <div class="tlsub">${esc(m.sub)}</div>
+    </div>`).join("");
+}
+
 function renderLog(){
   const el = document.getElementById("log");
   const evs = [...(state.events||[])].reverse();
@@ -130,11 +234,19 @@ function renderLog(){
   for(const e of evs){
     const div = document.createElement("div");
     div.className = "ev" + (e.day === state.day ? " today" : "");
+    // Link the two defining lifecycle events to the real transaction that
+    // produced them (verified hashes in provenance.json); other events link to
+    // nothing rather than a guess.
+    const et = provenance?.eventTx?.[e.kind];
+    const txline = et
+      ? `<div class="tx">tx <a target="_blank" rel="noopener" href="${EXPLORER}${encodeURIComponent(et.hash)}" title="${esc(et.note)}">${esc(et.hash.slice(0,14))}…</a></div>`
+      : "";
     div.innerHTML = `
       <div class="day num">d${e.day}</div>
       <div>
-        <div><span class="kind">${e.kind}</span> · ${e.merchant} · <span class="num">${e.value}</span></div>
-        <div class="muted">${e.note||""}</div>
+        <div><span class="kind ${kindClass(e.kind)}">${esc(e.kind)}</span> · ${esc(e.merchant)} · <span class="num">${e.value}</span></div>
+        <div class="muted">${esc(e.note||"")}</div>
+        ${txline}
       </div>`;
     el.appendChild(div);
   }
@@ -145,7 +257,7 @@ function renderMine(){
   const all = state.recentTxs || [];
   const txs = focusMerchant ? all.filter(t => t.merchant === focusMerchant) : all;
   const head = focusMerchant
-    ? `<div class="ev"><div class="day">—</div><div class="muted">Showing ${focusMerchant}. <a href="#" id="clear-focus">Show all</a></div></div>`
+    ? `<div class="ev"><div class="day">—</div><div class="muted">Showing ${esc(focusMerchant)}. <a href="#" id="clear-focus">Show all</a></div></div>`
     : "";
   el.innerHTML = head + (txs.length ? "" : '<div class="ev"><div class="day">—</div><div class="muted">No transactions yet — take an action above.</div></div>');
   for(const t of txs){
@@ -154,29 +266,44 @@ function renderMine(){
     div.innerHTML = `
       <div class="day num">${new Date(t.at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}</div>
       <div>
-        <div><span class="kind">${t.label}</span>${t.merchant?` · ${t.merchant}`:""}</div>
-        <div class="tx">tx <a target="_blank" rel="noopener" href="${EXPLORER}${t.hash}">${t.hash}</a></div>
+        <div><span class="kind">${esc(t.label)}</span>${t.merchant?` · ${esc(t.merchant)}`:""}</div>
+        <div class="tx">tx <a target="_blank" rel="noopener" href="${EXPLORER}${encodeURIComponent(t.hash)}">${esc(t.hash)}</a></div>
       </div>`;
     el.appendChild(div);
   }
 }
 
+function renderProvenance(){
+  const el = document.getElementById("prov");
+  if(!provenance){ el.innerHTML = '<div class="muted" style="font-size:12px">loading…</div>'; return; }
+  el.innerHTML = provenance.txs.map(t => `
+    <div class="prow">
+      <div class="lbl">${esc(t.label)}</div>
+      <div class="h"><a target="_blank" rel="noopener" href="${EXPLORER}${encodeURIComponent(t.hash)}" title="${esc(t.hash)}">${esc(t.hash.slice(0,10))}…</a></div>
+    </div>`).join("");
+}
+
+async function loadProvenance(){
+  try{ provenance = await (await fetch("/provenance.json")).json(); }
+  catch{ provenance = { txs: [] }; }
+  renderProvenance();
+  if(state) renderLog();
+}
+
 async function refresh(){
   try{
     const next = await api("GET","/api/state");
-    // Track the previous day's merchant snapshot for day-over-day deltas.
-    if(lastDay !== null && next.day !== lastDay && state){
-      prevMerchants = state.merchants;
-    }
+    if(lastDay !== null && next.day !== lastDay && state){ prevMerchants = state.merchants; }
     lastDay = next.day;
     state = next;
+    read = marketRead(state);
     document.getElementById("day").textContent = state.day;
     document.getElementById("contract").textContent = state.contract;
-    renderStalls(); renderPurse(); renderLog(); renderMine();
+    renderPulse(); renderMarket(); renderBoard(); renderPurse(); renderTimeline(); renderLog(); renderMine();
     renderModeNote();
   }catch(e){
-    setBanner(`Cannot reach the town contract: ${e.message}. ` +
-      `The local play server proxies to NEAR testnet — check it is running and the RPC is reachable.`);
+    setBanner(`Cannot reach the town contract: ${esc(e.message)}. ` +
+      `The server proxies to NEAR testnet — check it is running and the RPC is reachable.`);
     toast("State error: "+e.message, true);
   }
 }
@@ -244,5 +371,6 @@ document.addEventListener("click", async (ev)=>{
   }
 });
 
+loadProvenance();
 refresh();
 setInterval(refresh, 6000);

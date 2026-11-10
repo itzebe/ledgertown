@@ -221,6 +221,7 @@ export function createHandler({
       ext === ".html" ? "text/html; charset=utf-8"
       : ext === ".css" ? "text/css; charset=utf-8"
       : ext === ".js" ? "text/javascript; charset=utf-8"
+      : ext === ".json" ? "application/json; charset=utf-8"
       : ext === ".svg" ? "image/svg+xml"
       : ext === ".png" ? "image/png"
       : "text/plain; charset=utf-8";
