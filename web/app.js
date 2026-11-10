@@ -5,7 +5,7 @@
 // /api/state (which reads `final`-finality views of town.ledgertown.testnet),
 // and the economic signals are derived purely from those numbers (see
 // economy.js). Nothing here invents a balance, a price or a decision.
-import { GOODS, marketRead } from "./economy.js";
+import { GOODS, marketRead, quote, receipt } from "./economy.js";
 
 const EXPLORER = "https://testnet.nearblocks.io/txns/";
 let state = null;
@@ -14,6 +14,22 @@ let prevMerchants = null;   // previous day's snapshot, for day-over-day deltas
 let lastDay = null;
 let focusMerchant = null;   // merchant whose transactions the player last acted on
 let provenance = null;
+let pending = false;        // a trade is in flight — controls stay disabled across refreshes
+let lastReceipt = null;     // the confirmed result of the player's last action
+let sessionSteps = new Set(); // game-loop steps the visitor has actually performed
+
+const STEPS = [
+  { key: "gather", label: "Gather a good", hint: "free — fills your cargo" },
+  { key: "trade", label: "Sell or buy at a shop", hint: "watch credits and cargo move" },
+  { key: "advance", label: "Advance the market day", hint: "prices and stock adjust" },
+];
+
+function sessionMark(action) {
+  if (action === "gather") sessionSteps.add("gather");
+  if (action === "buy" || action === "sell") sessionSteps.add("trade");
+  if (action === "tick") sessionSteps.add("advance");
+}
+
 
 function toast(msg, err){
   const t = document.getElementById("toast");
@@ -71,9 +87,8 @@ function renderModeNote(){
      testnet state without holding any signing keys, so the trade buttons are disabled
      here. Every figure, the ledger and every explorer link are real. To play, run the
      server in play mode with a demo key (see the README).</div>`;
-  document.querySelectorAll(".gather, #advance, #advance7").forEach(b=>{
-    b.disabled = true; b.title = "Read-only deployment — actions are disabled here";
-  });
+  // Button disabling is handled centrally by applyBusy(), which also keeps
+  // controls locked while a transaction is in flight.
 }
 
 function renderPulse(){
@@ -93,6 +108,57 @@ function renderPulse(){
     return `<span class="chip ${x.verdict}" title="${good}: ${x.stock} units across ${x.shops} shop(s); base demand ${x.dbase}/day; ${cover}">
       <span class="g">${good}</span><span class="m num">${x.stock}u</span><span class="v">${label}</span></span>`;
   }).join("");
+}
+
+function goodOptions(specialty){
+  // The shop's own specialisation leads, then the other goods — every open shop
+  // really does quote all four (contract `compute_prices`), so all are offered.
+  const order = [specialty, ...GOODS.map((g) => g.good).filter((g) => g !== specialty)];
+  return order
+    .map((g) => `<option value="${g}">${g}${g === specialty ? " · own" : ""}</option>`)
+    .join("");
+}
+
+// Live pre-trade quote for one shop: exactly what the contract would do with
+// the selected good and quantity, computed from the same state it reads.
+function updateQuote(id) {
+  const el = document.getElementById("q-" + id);
+  if (!el || !state) return;
+  const m = state.merchants.find((x) => x.id === id);
+  if (!m) return;
+  const unitsEl = document.getElementById("u-" + id);
+  const units = Math.max(1, Math.trunc(Number(unitsEl.value) || 1));
+
+  if (m.state === "closed") {
+    const amount = Math.max(1, Math.trunc(Number(unitsEl.value) || 0));
+    const q = quote(state, "invest", { merchant: id, amount });
+    el.innerHTML = !q.ok
+      ? `<span class="ql bad">${esc(q.error)}</span>`
+      : q.reopens
+        ? `<span class="ql ok">Reopens ${esc(m.name)} — funded to <b class="num">${money(q.funded)}</b> ≥ threshold <b class="num">${money(q.threshold)}</b></span>`
+        : `<span class="ql bad">Still <b class="num">${money(q.shortfall)}</b> short of the <b class="num">${money(q.threshold)}</b> threshold — it stays closed</span>`;
+    return;
+  }
+
+  const good = document.getElementById("g-" + id).value;
+  const b = quote(state, "buy", { merchant: id, good, units });
+  const s = quote(state, "sell", { merchant: id, good, units });
+  const out = [];
+  if (b.ok) {
+    out.push(
+      b.willBuy > 0
+        ? `<span class="ql">Buy ${b.willBuy}${b.willBuy < units ? ` of ${units}` : ""} · <b class="num">${money(b.cost)}</b> credits → <span class="num">${money(b.cashAfter)}</span>${b.limitedBy ? ` <i>(limited by ${b.limitedBy})</i>` : ""}</span>`
+        : `<span class="ql bad">Buy ${good}: ${b.available === 0 ? "shop has no stock" : "you cannot afford any"}</span>`
+    );
+  }
+  if (s.ok) {
+    out.push(
+      s.willSell > 0
+        ? `<span class="ql">Sell ${s.willSell}${s.willSell < units ? ` of ${units}` : ""} · <b class="num">+${money(s.proceeds)}</b> credits → <span class="num">${money(s.cashAfter)}</span>${s.limitedBy ? ` <i>(limited by ${s.limitedBy})</i>` : ""}</span>`
+        : `<span class="ql bad">Sell ${good}: ${s.have === 0 ? "none in your cargo" : "shop can take none now"}</span>`
+    );
+  }
+  el.innerHTML = out.join("");
 }
 
 function renderMarket(){
@@ -116,18 +182,23 @@ function renderMarket(){
     const stockCls = r.stockRatio == null ? "" : (r.stockRatio < 0.5 || r.stockRatio > 2) ? "warn" : "good";
     const stockPct = r.stockRatio == null ? 0 : Math.min(1, r.stockRatio / 2);
 
+    // The shop's trade line. Open shops quote every good; the selector defaults
+    // to the shop's own specialisation. Closed shops take investment instead.
     const actions = closed
       ? `<div class="actions">
-           <span class="cap" style="align-self:center">Revive · needs ≥ ${money(r.reserve)}</span>
-           <input type="number" value="${Math.max(1, r.reserve)}" min="1" id="u-${m.id}" aria-label="credits to invest in ${m.name}" />
+           <label class="cap" for="u-${m.id}" style="align-self:center">Fund revival · threshold ${money(r.reserve)}</label>
+           <input type="number" value="${Math.max(1, r.reserve - m.cash)}" min="1" id="u-${m.id}" data-units="${m.id}" aria-label="credits to invest in ${m.name}" />
            <button class="primary" data-invest="${m.id}" ${ro}>Invest to reopen</button>
-         </div>`
+         </div>
+         <div class="quote" id="q-${m.id}" role="status" aria-live="polite"></div>`
       : `<div class="actions">
-           <span class="cap" style="align-self:center">units</span>
-           <input type="number" value="1" min="1" id="u-${m.id}" aria-label="units for ${m.name}" />
-           <button data-buy="${m.id}" ${ro}>Buy ${m.specialty}</button>
-           <button data-sell="${m.id}" ${ro}>Sell ${m.specialty}</button>
-         </div>`;
+           <label class="cap" for="g-${m.id}" style="align-self:center">Trade</label>
+           <select id="g-${m.id}" class="goodsel" data-goodsel="${m.id}" aria-label="good to trade with ${m.name}">${goodOptions(m.specialty)}</select>
+           <input type="number" value="1" min="1" max="50" id="u-${m.id}" data-units="${m.id}" aria-label="units for ${m.name}" />
+           <button class="primary" data-buy="${m.id}" ${ro}>Buy</button>
+           <button data-sell="${m.id}" ${ro}>Sell</button>
+         </div>
+         <div class="quote" id="q-${m.id}" role="status" aria-live="polite"></div>`;
 
     const shop = document.createElement("article");
     shop.className = "shop " + stateClass;
@@ -169,6 +240,8 @@ function renderMarket(){
       ${actions}`;
     el.appendChild(shop);
   }
+  // First paint of every quote line (values depend on the freshly rendered DOM).
+  for(const m of state.merchants) updateQuote(m.id);
 }
 
 function renderBoard(){
@@ -300,7 +373,7 @@ async function refresh(){
     document.getElementById("day").textContent = state.day;
     document.getElementById("contract").textContent = state.contract;
     renderPulse(); renderMarket(); renderBoard(); renderPurse(); renderTimeline(); renderLog(); renderMine();
-    renderModeNote();
+    renderModeNote(); renderReceipt(); renderGuide(); applyBusy();
   }catch(e){
     setBanner(`Cannot reach the town contract: ${esc(e.message)}. ` +
       `The server proxies to NEAR testnet — check it is running and the RPC is reachable.`);
@@ -308,17 +381,75 @@ async function refresh(){
   }
 }
 
-function busy(on){ document.querySelectorAll("button").forEach(b=>b.disabled=on); }
+// A trade is in flight until it settles: every control stays disabled across the
+// post-action refresh, so a second click can never fire a duplicate transaction.
+function applyBusy(){
+  const canAct = !!state?.canAct;
+  document.querySelectorAll("#market button, .gather, #advance, #advance7").forEach(b=>{
+    b.disabled = !canAct || pending;
+    if(!canAct) b.title = "Read-only deployment — actions are disabled here";
+  });
+}
+function busy(on){ pending = on; applyBusy(); }
+
+// The confirmed result of the last action: what actually changed, the shop's
+// updated position, and the real on-chain event and transaction.
+function renderReceipt(){
+  const el = document.getElementById("receipt-slot");
+  if(!el) return;
+  if(!lastReceipt){ el.innerHTML = ""; return; }
+  const r = lastReceipt;
+  const ev = r.event;
+  const changes = (r.changes||[]).map(c =>
+    `<span class="rc">${esc(c.label)} <span class="num">${money(c.from)}→${money(c.to)}</span> ` +
+    `<span class="delta ${c.delta>0?"up":"down"}">${c.delta>0?"+":""}${money(c.delta)}</span></span>`).join("");
+  const mer = r.merchant && r.merchant.changed
+    ? `<div class="rm">${esc(r.merchant.name)} · cash <span class="num">${money(r.merchant.cashFrom)}→${money(r.merchant.cashTo)}</span>` +
+      `${r.merchant.stateFrom!==r.merchant.stateTo?` · <b>${esc(r.merchant.stateFrom)} → ${esc(r.merchant.stateTo)}</b>`:""}` +
+      ` · stock ${r.merchant.invFrom}→${r.merchant.invTo}</div>`
+    : "";
+  el.innerHTML = `<div class="receipt" role="status" aria-live="polite">
+    <div class="rhead"><span class="ok">✓</span> <b>${esc(r.label)}</b> confirmed</div>
+    ${ev?`<div class="rnote">chain event <span class="kind">${esc(ev.kind)}</span>${ev.note?` · ${esc(ev.note)}`:""}</div>`:""}
+    <div class="rchg">${changes || '<span class="muted">the contract recorded no balance change</span>'}</div>
+    ${mer}
+    <div class="rtx">tx <a target="_blank" rel="noopener" href="${EXPLORER}${encodeURIComponent(r.hash)}">${esc(r.hash)}</a></div>
+  </div>`;
+}
+
+// First-time journey: three steps of the real game loop, ticked off as the
+// visitor performs them. It teaches by doing — no fabricated rewards or points.
+function renderGuide(){
+  const el = document.getElementById("guide");
+  if(!el) return;
+  if(!state || !state.canAct){
+    el.innerHTML = `<div class="guide ro"><b>Read-only preview.</b> The market, the ledger and every
+      explorer link are real NEAR testnet data, but trading needs signing keys this deployment does
+      not hold. The loop is: <b>gather</b> → <b>sell</b> → <b>advance the day</b>. To trade, run the
+      server in play mode (see the README).</div>`;
+    return;
+  }
+  el.innerHTML = `<ol class="guide-list">${STEPS.map((s,i)=>{
+    const done = sessionSteps.has(s.key);
+    return `<li class="${done?"done":""}"><span class="gs">${done?"✓":i+1}</span>` +
+      `<span><b>${esc(s.label)}</b><span class="gh">${esc(s.hint)}</span></span></li>`;
+  }).join("")}</ol>`;
+}
 
 async function act(label, action, body, merchant){
+  const before = state;   // snapshot for an honest, chain-backed receipt
   busy(true);
   try{
     const r = await api("POST", "/api/action/"+action, body);
     if(merchant) focusMerchant = merchant;
-    toast(`${label} — tx ${r.hash.slice(0,14)}…`);
+    sessionMark(action);
     await refresh();
-  }catch(e){ toast(`${label} refused: ${e.message}`, true); }
-  finally{ busy(false); }
+    lastReceipt = { label, hash: r.hash, ...receipt(before, state, r.event) };
+    renderReceipt(); renderGuide();
+    toast(`${label} — tx ${r.hash.slice(0,14)}…`);
+  }catch(e){
+    toast(`${label} failed: ${e.message}`, true);
+  }finally{ busy(false); }
 }
 
 // Fast-forward: the server signs each day as a separate real transaction and
@@ -328,8 +459,7 @@ async function fastForward(){
   if(advancing) return;
   advancing = true;
   const prog = document.getElementById("prog");
-  const btn = document.getElementById("advance7");
-  btn.disabled = true; prog.textContent = "advancing…";
+  busy(true); prog.textContent = "advancing…";
   try{
     const r = await api("POST","/api/advance",{days:7});
     if(r.completed === r.requested){
@@ -339,12 +469,13 @@ async function fastForward(){
       prog.textContent = `advanced ${r.completed} of ${r.requested} days (stopped: ${(r.failed&&r.failed[0]&&r.failed[0].error)||"error"})`;
       toast(`Advanced only ${r.completed}/${r.requested} days`, true);
     }
-    await refresh();
+    sessionSteps.add("advance");
+    await refresh(); renderGuide();
   }catch(e){
     prog.textContent = "fast-forward failed: " + e.message;
     toast("Fast-forward failed: "+e.message, true);
   } finally {
-    advancing = false; btn.disabled = false;
+    advancing = false; busy(false);
   }
 }
 
@@ -354,21 +485,33 @@ document.addEventListener("click", async (ev)=>{
   if(b.id==="advance") return act("Day advanced","tick",{});
   if(b.id==="advance7") return fastForward();
   if(b.dataset.gather) return act(`Gathered ${b.dataset.gather}`,"gather",{good:b.dataset.gather,units:5});
-  if(b.dataset.buy){
-    const id=b.dataset.buy, units=Number(document.getElementById("u-"+id).value)||1;
-    const m=state.merchants.find(x=>x.id===id);
-    return act(`Bought ${units} ${m.specialty} from ${m.name}`,"buy",{merchant:id,good:m.specialty,units},id);
-  }
-  if(b.dataset.sell){
-    const id=b.dataset.sell, units=Number(document.getElementById("u-"+id).value)||1;
-    const m=state.merchants.find(x=>x.id===id);
-    return act(`Sold ${units} ${m.specialty} to ${m.name}`,"sell",{merchant:id,good:m.specialty,units},id);
+  if(b.dataset.buy || b.dataset.sell){
+    const id = b.dataset.buy || b.dataset.sell;
+    const action = b.dataset.buy ? "buy" : "sell";
+    const m = state.merchants.find(x=>x.id===id);
+    const good = document.getElementById("g-"+id).value;
+    const units = Math.max(1, Math.trunc(Number(document.getElementById("u-"+id).value)||1));
+    const verb = action==="buy" ? "Bought" : "Sold";
+    const prep = action==="buy" ? "from" : "to";
+    return act(`${verb} ${units} ${good} ${prep} ${m.name}`, action, {merchant:id, good, units}, id);
   }
   if(b.dataset.invest){
     const id=b.dataset.invest;
-    const amount=Number(document.getElementById("u-"+id).value)||200;
+    const amount=Math.max(1, Math.trunc(Number(document.getElementById("u-"+id).value)||0));
     return act(`Invested ${amount} in ${id}`,"invest",{merchant:id,amount},id);
   }
+});
+
+// Live quote preview: re-quote as the visitor changes the good or the quantity,
+// without a round trip — the numbers are derived from the state already held.
+document.addEventListener("input", (ev)=>{
+  const t = ev.target;
+  const id = t.dataset?.units || t.dataset?.goodsel;
+  if(id) updateQuote(id);
+});
+document.addEventListener("change", (ev)=>{
+  const id = ev.target.dataset?.goodsel;
+  if(id) updateQuote(id);
 });
 
 loadProvenance();

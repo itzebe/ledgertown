@@ -74,6 +74,13 @@ export function validateAdvance(body = {}) {
   return { ok: true, days };
 }
 
+/** The newest event id the contract has emitted, or 0 when there are none.
+ *  Used by the client to read back what a just-executed action did. */
+export function newestEventId(events) {
+  if (!Array.isArray(events) || events.length === 0) return 0;
+  return events.reduce((max, e) => Math.max(max, Number(e?.id) || 0), 0);
+}
+
 /** Strict integer parse: rejects floats, exponents, "1e3", "1.5", NaN, "". */
 export function toInt(v) {
   if (typeof v === "number") return Number.isInteger(v) ? v : null;

@@ -279,3 +279,52 @@ test("static .json assets are served as application/json (provenance panel)", as
   assert.ok(body.eventTx.CLOSED && body.eventTx.REOPENED);
 });
 
+
+// ---------------------------------------------------------------------------
+// Trade feedback plumbing: the state exposes the newest event id, and a
+// successful action returns the real on-chain event it just wrote — the data
+// the interface turns into an honest receipt.
+// ---------------------------------------------------------------------------
+const STATE_WITH_EVENTS = {
+  day: 51,
+  town: [51, 3000, 4, 5569],
+  player: { cash: 5569, inventory: { iron: 100 }, deposited_yocto: 0 },
+  merchants: [{ id: "smith", state: "open", last_decision: "" }],
+  events: [
+    { id: 0, day: 22, merchant: "smith", kind: "CLOSED", value: -2, note: "insolvent" },
+    { id: 1, day: 31, merchant: "smith", kind: "REOPENED", value: 198, note: "investor funded revival" },
+  ],
+};
+
+test("GET /api/state exposes lastEventId from the contract's own events", async () => {
+  const { handler } = build({ getState: async () => STATE_WITH_EVENTS });
+  const res = await call(handler, "GET", "/api/state");
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.json().lastEventId, 1);
+});
+
+test("lastEventId is 0 when the contract has recorded no events", async () => {
+  const { handler } = build({ getState: async () => ({ ...STATE_WITH_EVENTS, events: [] }) });
+  const res = await call(handler, "GET", "/api/state");
+  assert.equal(res.json().lastEventId, 0);
+});
+
+test("a successful action returns the newest on-chain event for the receipt", async () => {
+  const { handler } = build({ getState: async () => STATE_WITH_EVENTS });
+  const res = await call(handler, "POST", "/api/action/sell", {
+    merchant: "smith", good: "iron", units: 9,
+  });
+  assert.equal(res.statusCode, 200);
+  const j = res.json();
+  assert.equal(j.ok, true);
+  assert.equal(j.hash, "H_SELL");
+  assert.equal(j.event.kind, "REOPENED"); // newest event, read back from the chain
+  assert.equal(j.event.id, 1);
+});
+
+test("read-only mode still returns lastEventId (browsing stays fully informative)", async () => {
+  const { handler } = build({ getState: async () => STATE_WITH_EVENTS }, { mode: "read-only" });
+  const res = await call(handler, "GET", "/api/state");
+  assert.equal(res.json().canAct, false);
+  assert.equal(res.json().lastEventId, 1);
+});

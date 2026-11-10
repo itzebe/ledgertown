@@ -163,6 +163,154 @@ export function riskNote(m, r) {
   return { level: "ok", text: `Covering fixed costs with room to restock.` };
 }
 
+/** Per-shop trade headroom, derived from real state and the contract's own
+ *  spend rules. Returns the numbers a trade preview needs: the stock a shop can
+ *  actually sell you, and the goods it can actually pay for. */
+export function tradeHeadroom(m) {
+  const fixed = m.fixed_cost ?? 0;
+  const reserve = RESERVE_MULT * fixed;
+  const cash = m.cash ?? 0;
+  // sell_to: `spendable = (cash - 2*fixed).max(0)`; affordable = spendable / bid
+  const spendable = Math.max(0, cash - reserve);
+  const buyBid = (good) => {
+    const bid = m.bid_price?.[good];
+    if (typeof bid !== "number" || bid <= 0) return { bid: null, affordable: 0 };
+    return { bid, affordable: Math.floor(spendable / bid) };
+  };
+  const sellUnits = (good) => {
+    // The contract's room is `STOCK_MAX - inv` (floored at 0) — how many units
+    // the shop can still take before it is full.
+    const inv = m.inventory?.[good] ?? 0;
+    return Math.max(0, STOCK_MAX - inv);
+  };
+  return { reserve, spendable, buyBid, sellUnits };
+}
+
+/** A pre-trade quote: exactly what the contract would do, computed from the
+ *  same state the contract reads. Never a promise — the trade preview shows it
+ *  as "if it lands", and the real outcome comes from the chain. */
+export function quote(state, action, args = {}) {
+  const player = state?.player || {};
+  const merchants = state?.merchants || [];
+  const cash = player.cash ?? 0;
+  const inv = player.inventory || {};
+
+  if (action === "gather") {
+    const good = String(args.good ?? "");
+    const units = Math.max(0, Math.trunc(Number(args.units) || 0));
+    if (!BY_GOOD[good]) return { ok: false, error: `unknown good "${good}"` };
+    return {
+      ok: true, kind: "gather", good, units, free: true,
+      note: "Gathering is free and adds the units to your cargo.",
+    };
+  }
+
+  if (action === "buy" || action === "sell") {
+    const good = String(args.good ?? "");
+    const units = Math.max(0, Math.trunc(Number(args.units) || 0));
+    const m = merchants.find((x) => x.id === args.merchant);
+    if (!m) return { ok: false, error: "unknown merchant" };
+    if (!BY_GOOD[good]) return { ok: false, error: `unknown good "${good}"` };
+    if (m.state !== "open") return { ok: false, error: `${m.name} is closed — it is not trading` };
+
+    const price = m.list_price?.[good];
+    const bid = m.bid_price?.[good];
+
+    if (action === "buy") {
+      if (typeof price !== "number") return { ok: false, error: `${m.name} does not quote ${good}` };
+      const available = m.inventory?.[good] ?? 0;
+      const executable = Math.min(units, available);
+      const total = executable * price;
+      const affordable = Math.floor(cash / price);
+      const willBuy = Math.min(executable, affordable);
+      return {
+        ok: true, kind: "buy", merchant: m.id, name: m.name, good, units, price,
+        available, executable, willBuy, total, cost: willBuy * price,
+        cashAfter: cash - willBuy * price,
+        inventoryAfter: (inv[good] ?? 0) + willBuy,
+        limitedBy: willBuy < units ? (willBuy < executable ? "credits" : "stock") : null,
+      };
+    }
+
+    // sell: the contract's own three limits — your stock, the shop's room, and
+    // the shop's spendable cash at the current bid.
+    if (typeof bid !== "number") return { ok: false, error: `${m.name} does not quote ${good}` };
+    const have = inv[good] ?? 0;
+    const h = tradeHeadroom(m);
+    const room = h.sellUnits(good);
+    const { affordable } = h.buyBid(good);
+    const willSell = Math.min(units, have, room, affordable);
+    // Name the constraint that actually binds: the smallest of the three limits.
+    const binding = [
+      { k: "cargo", v: have },
+      { k: "shop stock room", v: room },
+      { k: "shop cash", v: affordable },
+    ].reduce((a, b) => (b.v < a.v ? b : a));
+    return {
+      ok: true, kind: "sell", merchant: m.id, name: m.name, good, units, bid,
+      have, room, affordable, willSell, proceeds: willSell * bid,
+      cashAfter: cash + willSell * bid,
+      inventoryAfter: have - willSell,
+      limitedBy: willSell < units ? binding.k : null,
+    };
+  }
+
+  if (action === "invest") {
+    const amount = Math.max(0, Math.trunc(Number(args.amount) || 0));
+    const m = merchants.find((x) => x.id === args.merchant);
+    if (!m) return { ok: false, error: "unknown merchant" };
+    if (m.state !== "closed") return { ok: false, error: `${m.name} is open — investment is for closed shops` };
+    const threshold = RESERVE_MULT * (m.fixed_cost ?? 0);
+    const funded = (m.cash ?? 0) + amount;
+    const shortfall = Math.max(0, threshold - funded);
+    return {
+      ok: true, kind: "invest", merchant: m.id, name: m.name, amount, threshold,
+      shopCash: m.cash ?? 0, funded, reopens: funded >= threshold, shortfall,
+      cashAfter: cash - amount,
+    };
+  }
+
+  return { ok: false, error: `no quote for "${action}"` };
+}
+
+/** What actually changed, from the contract's own record. The caller passes the
+ *  state before the action, the state after, and the newest event the contract
+ *  emitted (from `get_events`). Everything here is read, never assumed: a field
+ *  is only reported when a real value supports it. */
+export function receipt(before, after, event) {
+  const out = { event: event || null, changes: [] };
+  if (!after) return out;
+
+  const b = before?.player || {};
+  const a = after.player || {};
+  if (b.cash != null && a.cash != null && b.cash !== a.cash) {
+    out.changes.push({ label: "credits", from: b.cash, to: a.cash, delta: a.cash - b.cash });
+  }
+  const binv = b.inventory || {};
+  const ainv = a.inventory || {};
+  for (const good of Object.keys({ ...binv, ...ainv })) {
+    const from = binv[good] ?? 0;
+    const to = ainv[good] ?? 0;
+    if (from !== to) out.changes.push({ label: good, from, to, delta: to - from });
+  }
+  if (b.deposited_yocto != null && a.deposited_yocto != null && b.deposited_yocto !== a.deposited_yocto) {
+    out.changes.push({ label: "deposited", from: b.deposited_yocto, to: a.deposited_yocto, delta: a.deposited_yocto - b.deposited_yocto });
+  }
+
+  const mid = event?.merchant;
+  const bm = (before?.merchants || []).find((x) => x.id === mid);
+  const am = (after.merchants || []).find((x) => x.id === mid);
+  if (bm && am) {
+    const mc = { id: am.id, name: am.name, stateFrom: bm.state, stateTo: am.state, cashFrom: bm.cash, cashTo: am.cash };
+    const good = am.specialty;
+    mc.invFrom = bm.inventory?.[good] ?? 0;
+    mc.invTo = am.inventory?.[good] ?? 0;
+    mc.changed = mc.stateFrom !== mc.stateTo || mc.cashFrom !== mc.cashTo || mc.invFrom !== mc.invTo;
+    out.merchant = mc;
+  }
+  return out;
+}
+
 /** Assemble the full derived read attached to /api/state. */
 export function marketRead(state = {}) {
   const merchants = state.merchants || [];
