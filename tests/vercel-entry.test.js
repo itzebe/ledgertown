@@ -8,11 +8,13 @@
 //     rejected build is retried on the next request instead of being cached.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildHandler, memoizeOnce } from "../api/[...path].js";
 
-const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "web");
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const webRoot = path.join(root, "web");
 
 function fakeTown() {
   const calls = [];
@@ -127,4 +129,17 @@ test("memoizeOnce retries after a rejected build instead of caching the failure"
   const second = await get();
   assert.equal(n, 2, "a rejected build must be retried, not cached");
   assert.deepEqual(second, { id: 2 });
+});
+
+// Vercel's generated route for a bracket catch-all in a non-framework build is
+// `^/api/([^/]+)$` — a SINGLE segment — so `/api/action/gather` would 404 before
+// reaching the function. vercel.json must keep an explicit multi-segment rewrite.
+test("vercel.json rewrites multi-segment /api paths to the catch-all function", () => {
+  const cfg = JSON.parse(fs.readFileSync(path.join(root, "vercel.json"), "utf8"));
+  const api = (cfg.rewrites || []).find(
+    (r) => r.source === "/api/:path*" && r.destination === "/api/[...path]",
+  );
+  assert.ok(api, "a /api/:path* -> /api/[...path] rewrite must exist for nested routes");
+  const health = (cfg.rewrites || []).find((r) => r.source === "/healthz");
+  assert.ok(health, "the /healthz rewrite must be preserved");
 });
