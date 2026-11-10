@@ -263,7 +263,7 @@ Offline (no network, no account required):
 
 ```bash
 npm run test:contract     # 11 tests incl. exact 30-day parity vs the reference
-npm run test:agent        # 49 unit tests: merchant policy, failure detection, chain
+npm run test:agent        # 50 unit tests: merchant policy, failure detection, chain
                           # guard, server guards, handler, town client, Vercel entry
 python3 feasibility/tests.py       # 25 invariants / determinism tests
 python3 feasibility/exploits.py    # 39 adversarial exploit probes
@@ -283,14 +283,16 @@ node scripts/verify-parity.js   # 30 days on the deployed contract vs golden (12
 Verified on the live deployment (`town.ledgertown.testnet`, NEAR testnet):
 
 - Contract: `cargo test` — **11 passed**, including exact 30-day parity.
-- Unit tests: `node --test tests/*.test.js` — **49 passed** (policy, failure
+- Unit tests: `node --test tests/*.test.js` — **50 passed** (policy, failure
   detection, chain guard, server guards, handler, town client, Vercel entry).
 - Reference model: `feasibility/tests.py` — **25/25 passed**; `feasibility/exploits.py`
   — **39/39 passed**.
 - Public deployment: `https://ledgertown.vercel.app/` — read-only, serves live
   `town.ledgertown.testnet` state with no keys; `/healthz` and `/api/state` answer
-  over the public internet; owner-only and `deposit` routes return `400`; oversized
-  and malformed bodies are rejected. (Re-verified against the released deployment.)
+  over the public internet; nested routes (`/api/action/<name>`) reach the handler
+  (owner-only and `deposit` → `400`, valid actions → `503` read-only, invalid input
+  → `400`, oversized body → `413`); all security headers present; browser console
+  clean. (Re-verified against the released deployment from the merged `main`.)
 - Live parity: `scripts/verify-parity.js` — **PASS, 120 rows, 0 mismatches** against the
   deployed `town.ledgertown.testnet` (reset + 30 ticks, every merchant every day).
 - Lifecycle: `driver/demo.js` produced a `CLOSED` (day 22, cash −2) then `REOPENED`
