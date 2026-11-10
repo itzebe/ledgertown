@@ -347,7 +347,7 @@ Verified on the live deployment (`town.ledgertown.testnet`, NEAR testnet):
 
 - Contract: `cargo test` — **20 passed** (per-account purse isolation, owner-only
   migration, exact 30-day parity).
-- Unit tests: `node --test tests/*.test.js` — **90 passed** (policy, failure
+- Unit tests: `node --test tests/*.test.js` — **93 passed** (policy, failure
   detection, chain guard, server guards, handler incl. the `/api/player` endpoint,
   town client, the economy derivations the UI reads, the game logic, the
   non-custodial wallet layer, and the Vercel entry).

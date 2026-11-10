@@ -103,7 +103,7 @@ from the README) and show `demo-log.json` plus the explorer hashes.
 
 - Contract `cargo test` — **20 passed**, incl. per-account purse isolation, owner-only
   migration, and exact 30-day parity vs the reference.
-- `node --test tests/*.test.js` — **90 passed** (policy, failure detection, chain guard,
+- `node --test tests/*.test.js` — **93 passed** (policy, failure detection, chain guard,
   server guards, handler incl. `/api/player`, town client, the economy derivations the UI
   reads, the game logic, the non-custodial wallet layer, Vercel entry).
 - Reference model — `feasibility/tests.py` **25/25**; `feasibility/exploits.py` **39/39**.
