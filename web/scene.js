@@ -5,9 +5,9 @@
 // stock and lifecycle state. Nothing is fabricated.
 //
 // Dependency-free and I/O-free so the scene can be unit-tested offline
-// (tests/town.test.js) and rendered identically by any surface.
+// (tests/scene.test.js) and rendered identically by any surface.
 
-import { GOODS, merchantRead } from "./economy.js";
+import { merchantRead } from "./economy.js";
 
 export const TOWN_W = 1000;
 export const TOWN_H = 400;
@@ -193,8 +193,9 @@ export function townSvg(model, { selected = null } = {}) {
     <rect class="ground" x="0" y="${GROUND_Y}" width="${TOWN_W}" height="${TOWN_H - GROUND_Y}"/>
     <path class="road" d="M0 ${GROUND_Y + 34} H${TOWN_W}"/>`;
   const buildings = model.map((b) => buildingSvg(b, { selected: b.id === selected })).join("");
+  const word = { 1: "one", 2: "two", 3: "three", 4: "four" }[model.length] || String(model.length);
   return `<svg id="town-svg" viewBox="0 0 ${TOWN_W} ${TOWN_H}" role="group"
-    aria-label="The town: four merchant shops" preserveAspectRatio="xMidYMid meet">
+    aria-label="The town: ${word} merchant shops" preserveAspectRatio="xMidYMid meet">
     ${sky}${buildings}</svg>`;
 }
 
@@ -209,7 +210,7 @@ export function townTiles(model, { selected = null } = {}) {
       aria-label="${esc(b.name)}, ${esc(b.specialty)} shop, ${esc(b.label)}${b.reopened ? `, revived ${b.reopened} time(s)` : ""}">
       <span class="tile-top"><span class="tile-sw"></span><span class="tile-name">${esc(b.name)}</span></span>
       <span class="tile-cond">${esc(b.label)}</span>
-      <span class="tile-nums"><span class="num">${b.cash}</span> cr · <span class="num">${b.inv}</span> ${esc(b.specialty)}</span>
+      <span class="tile-nums"><span class="num">${esc(b.cash)}</span> cr · <span class="num">${esc(b.inv)}</span> ${esc(b.specialty)}</span>
     </button>`).join("");
   return `<div class="tiles">${tiles}</div>`;
 }
