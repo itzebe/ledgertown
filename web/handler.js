@@ -9,6 +9,7 @@ import {
   validateAction,
   validateAdvance,
   explainDecision,
+  newestEventId,
   originAllowed,
   RateLimiter,
   SingleFlight,
@@ -117,6 +118,9 @@ export function createHandler({
         decision: explainDecision(m.last_decision),
       })),
       events: state.events,
+      // Newest event id the contract has emitted. A trade receipt fetches
+      // `get_events` from here to read back what the action actually did.
+      lastEventId: newestEventId(state.events),
       recentTxs,
     };
   }
@@ -149,7 +153,11 @@ export function createHandler({
       const out = await town[v.action](v.args);
       remember(v.action, out.hash, v.args.merchant);
       const state = await town.getState();
-      return { hash: out.hash, day: state.day };
+      // The newest event is the one this action just wrote to the contract.
+      // Returning it lets the client show an honest receipt (what the chain
+      // recorded), rather than assuming an outcome.
+      const evs = state.events || [];
+      return { hash: out.hash, day: state.day, event: evs.length ? evs[evs.length - 1] : null };
     });
     if (!result.ok) return send(res, 409, { ok: false, error: result.error });
     return send(res, 200, { ok: true, ...result.value });

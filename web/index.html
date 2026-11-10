@@ -204,6 +204,42 @@
   .prow .h{font-family:var(--mono);font-size:10.5px}
   .prow .h a{color:var(--copper);display:inline-block;padding:6px 2px}
 
+  /* ---- first-time guide (three real game-loop steps) ---- */
+  #guide{margin:0 0 12px}
+  .guide{border:1px solid var(--rule);border-left:4px solid var(--copper);border-radius:3px;
+    background:rgba(156,79,30,.05);padding:10px 13px;font-size:12.5px;color:var(--ink2)}
+  .guide b{color:var(--ink)}
+  .guide-list{list-style:none;margin:0;padding:0;display:flex;gap:18px;flex-wrap:wrap}
+  .guide-list li{display:flex;gap:8px;align-items:baseline;color:var(--ink2)}
+  .guide-list li.done{color:var(--green)}
+  .guide-list li.done b{color:var(--green)}
+  .guide-list .gs{font-family:var(--mono);font-size:11px;border:1px solid var(--rule);border-radius:50%;
+    width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .guide-list li.done .gs{border-color:var(--green);color:var(--green)}
+  .guide-list .gh{display:block;font-size:11px;color:var(--muted)}
+
+  /* ---- trade controls: good selector + live quote line ---- */
+  .goodsel{font-family:var(--mono);font-size:13px;background:#fff;border:1px solid var(--rule);
+    border-radius:3px;padding:5px 7px;color:var(--ink)}
+  .quote{margin-top:7px;font-size:12px;color:var(--ink2)}
+  .ql{display:inline-block;margin:0 12px 2px 0}
+  .ql b{font-family:var(--mono)}
+  .ql i{color:var(--muted);font-style:normal;font-size:11px}
+  .ql.ok{color:var(--green)} .ql.bad{color:var(--red)}
+
+  /* ---- action receipt (what the chain recorded) ---- */
+  .receipt{border:1px solid var(--green);border-left:4px solid var(--green);border-radius:3px;
+    background:rgba(63,107,58,.07);padding:11px 14px;margin:0 0 18px;font-size:13px}
+  .receipt .rhead{color:var(--green)}
+  .receipt .rhead .ok{font-weight:700}
+  .receipt .rnote{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .receipt .rnote .kind{font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--copper)}
+  .receipt .rchg{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+  .receipt .rc .num{font-family:var(--mono)}
+  .receipt .rm{font-size:11.5px;color:var(--ink2);margin-top:5px}
+  .receipt .rtx{font-family:var(--mono);font-size:10.5px;margin-top:5px;word-break:break-all}
+  .receipt .rtx a{color:var(--copper);display:inline-block;padding:6px 0}
+
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;background:var(--ink);
     color:var(--paper);padding:11px 18px;border-radius:4px;font-size:13.5px;max-width:88vw;
     opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
@@ -263,6 +299,7 @@
   <div>
     <section>
       <h2 class="sec">The market <span class="hint" id="market-hint">four shops, each quoting every good</span></h2>
+      <div id="guide"></div>
       <details class="rules">
         <summary>How a merchant decides (and who has the last word)</summary>
         <div class="rules-body">
@@ -291,6 +328,7 @@
   </div>
 
   <div>
+    <div id="receipt-slot"></div>
     <section>
       <h2 class="sec">Your purse</h2>
       <div class="purse">
@@ -300,7 +338,7 @@
         <div class="inv" id="pinv"><span class="muted">empty</span></div>
         <p class="shared" id="shared-note">One shared on-chain purse — every visitor trades from the same credits.</p>
         <div class="actions">
-          <span class="cap" style="align-self:center">Gather (free)</span>
+          <span class="cap" style="align-self:center">Gather <span class="num">+5</span> (free)</span>
           <button class="gather" data-gather="grain">grain</button>
           <button class="gather" data-gather="iron">iron</button>
           <button class="gather" data-gather="cloth">cloth</button>
