@@ -1,0 +1,16 @@
+# Never upload secrets or local build artefacts to a host.
+keys/
+*.key
+.env
+.env.*
+!.env.example
+demo-log.json
+contract/target/
+node_modules/
+docs/screenshots/
+shots/
+feasibility/results/
+.openhands/
+*.log
+*.out
+.git/

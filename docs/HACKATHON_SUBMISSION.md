@@ -30,12 +30,25 @@ merchant closes until someone invests). Ledgertown is that loop, live on NEAR te
 | Judged on the game loop | 15 healthy days → flood → insolvency → close → invest → reopen → recover | **Done** |
 | Merchant pricing rules in one readable file | `driver/agent.js` `decideForMe` (one pure function) | **Done** |
 | Show a merchant's reasoning | On-chain `last_decision` string, surfaced in the UI per shop | **Partial** (shown as text, not a hover tooltip) |
-| Fast-forward a week in a minute | `tick` advances one day; UI has "Advance one day" | **Partial** (no multi-day fast-forward button) |
+| Fast-forward a week in a minute | `tick` advances one day; UI has **Advance one day** and **Fast-forward 7 days** (each day a separate real tx) | **Done** |
 | Items as NEP-245 multi-tokens | Items are contract-internal balances on one contract | **Gap** (one contract holds all items, but not via NEP-245) |
 | Social / email login, no popups | Local testnet key files; local play server | **Gap** (local harness, per Q-012) |
 
 Gaps are disclosed here and in the README. Q-011 states track hints are hints, not
 requirements; Q-012 allows a local-only demo with a reproducible README.
+
+### Public hosting status (read this before the demo)
+
+The project is deployed read-only at **https://ledgertown.vercel.app/** (Vercel Hobby
+plan, free). It serves the real UI and live `town.ledgertown.testnet` state with **no
+signing keys loaded**, so every figure and explorer link is real, but the trade and
+fast-forward buttons are disabled and every action endpoint returns `503`.
+
+Public play mode is deliberately **not** enabled: the contract has a single shared
+`Player` purse, so a public play deployment would put one funded shared signer behind
+anonymous visitors. The **interactive** demo (gather / sell / advance / invest) is run
+locally in play mode with a throwaway demo key, exactly as in §4 below; the hosted site
+is the key-free read-only view of the same contract.
 
 ## 3. NEAR's role (say this plainly in the demo post)
 
@@ -56,8 +69,8 @@ NEAR is the **authoritative ledger and the source of the agents' autonomy**:
    shops: each shows its own account, cash, stock, price and last decision.
 2. Click **Gather iron**, then **Sell iron** to the smith. Show the cargo and credits
    change and the new hash appear under "Your transactions"; open it on the explorer.
-3. Click **Advance one day** a few times; show prices move as merchants restock and
-   undercut each other. Point at the **Town ledger** events.
+3. Click **Advance one day** a few times (or **Fast-forward 7 days**); show prices move
+   as merchants restock and undercut each other. Point at the **Town ledger** events.
 4. Scroll the ledger to the recorded **`CLOSED` (day 22, cash −2)** then
    **`REOPENED` (day 31, cash 198)** for the smith — the economy evolved on its own.
 5. Say the one line: *"Every number here is read from a real NEAR testnet contract, and
@@ -69,13 +82,17 @@ from the README) and show `demo-log.json` plus the explorer hashes.
 ## 5. Evidence already verified (see README "Evidence")
 
 - Contract `cargo test` — **11 passed**, incl. exact 30-day parity vs the reference.
-- `node --test tests/*.test.js` — **17 passed** (8 policy + 4 failure-detection + 5 chain-guard).
+- `node --test tests/*.test.js` — **49 passed** (policy, failure detection, chain guard,
+  server guards, handler, town client, Vercel entry).
 - Reference model — `feasibility/tests.py` **25/25**; `feasibility/exploits.py` **39/39**.
 - Live parity vs deployed `town.ledgertown.testnet` — **PASS, 120 rows, 0 mismatches**.
 - Lifecycle — `CLOSED` day 22 → `REOPENED` day 31, ending `open` (14 txs).
 - Merchant agents — 8 real signed `merchant_decide` txs, accepted and recorded.
-- UI — no horizontal overflow at 320/390/768/1280 px; text contrast ≥ AA; each action
-  links to its real explorer transaction.
+- Public deployment — `https://ledgertown.vercel.app/` read-only: `/healthz` and
+  `/api/state` serve live day-51 state over the public internet with no keys; owner-only
+  and `deposit` routes return `400`; oversized/malformed bodies are rejected.
+- UI — no horizontal overflow at 320/390/768/1280/1440 px; text contrast ≥ AA; each
+  action links to its real explorer transaction.
 
 ## 6. Submission payload — values the human must supply
 
@@ -98,23 +115,21 @@ from their answers and sends only after they confirm. `website` must stay absent
 
 ## 7. Pre-submission checklist
 
-- [ ] Repository is **public** (currently `itzebe/ledgertown`).
-- [ ] `LICENSE` file present (Q-014).
-- [ ] README states what is real vs baseline (Q-002/Q-003) and how to reproduce.
-- [ ] PR #1 merged to `main` (judges read the default branch).
+- [x] Repository is **public** (`itzebe/ledgertown`).
+- [x] `LICENSE` file present (Q-014), MIT, holder `itzebe`.
+- [x] README states what is real vs baseline (Q-002/Q-003) and how to reproduce.
+- [x] PR #1 merged to `main`; PR #2 (public release) merges the Vercel path (judges read
+      the default branch).
 - [ ] Demo video recorded and X post published by the human (`@NEARProtocol`, `#NEARHackathon`).
 - [ ] Payload printed and confirmed by the human; sent once.
-- [ ] Hosted demo (optional plus) kept up through 2026-11-18.
+- [x] Hosted demo live (read-only) at `https://ledgertown.vercel.app/`; keep up through 2026-11-18.
 
-## 8. Recommended small additions before the deadline (not yet done)
+## 8. Recommended small additions before the deadline
 
-Highest ROI first, all low-risk and inside the current architecture:
-
-1. **Fast-forward control** — a "advance 7 days" button in the UI (calls `tick` in a
-   loop). Directly answers the track's fast-forward ask; ~1 hour.
-2. **Merchant-reasoning tooltip** — turn the `last_decision` text into a hover tooltip
-   on each shop. Directly answers "show a merchant's reasoning"; ~1 hour.
-3. **`LICENSE`** file (MIT).
+1. **Merchant-reasoning tooltip** — turn the `last_decision` text into a hover tooltip
+   on each shop. Directly answers "show a merchant's reasoning"; ~1 hour. (The text is
+   already shown per shop; only the tooltip affordance is missing.)
 
 Larger, optional, higher risk (disclose as gaps if not done): NEP-245 item tokens, and
-social/email login without key files.
+social/email login without key files. **Done already:** the fast-forward control and the
+MIT `LICENSE`.
