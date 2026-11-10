@@ -302,6 +302,10 @@ function renderPurse(){
   } else {
     note.textContent = "Connect a wallet to open your own purse.";
   }
+  // The purse's gather buttons are markup in index.html; gate them here so they
+  // are never enabled on the single-purse contract or before a wallet connects.
+  const canAct = state?.model === "per-account" && (walletStatus === "connected" || walletStatus === "pending");
+  document.querySelectorAll("#purse-gather .gather").forEach(b=>{ b.disabled = !canAct; });
 }
 
 function kindClass(kind){
@@ -482,6 +486,17 @@ document.addEventListener("click", async (ev)=>{
   if(b.id === "w-disconnect"){ walletCtl?.disconnect(); player = null; refresh(); return; }
   if(b.id === "p-init") return playerAct("Purse opened", "player_init", {});
   if(b.id === "p-advance") return playerAct("Advanced one day", "tick", {});
+
+  // Every player action below is refused unless the per-account contract is live
+  // and a wallet is connected — defence in depth beyond the disabled attribute.
+  const canAct = state?.model === "per-account" && (walletStatus === "connected" || walletStatus === "pending");
+  const isPlayerAction = b.dataset.gather || b.dataset.buy || b.dataset.sell || b.dataset.invest;
+  if(isPlayerAction && !canAct){
+    toast(state?.model !== "per-account"
+      ? "Play needs the per-account contract upgrade — not deployed yet."
+      : "Connect a NEAR testnet wallet first.", true);
+    return;
+  }
 
   if(b.dataset.gather){
     const units = 5;
