@@ -42,7 +42,9 @@ requirements; Q-012 allows a local-only demo with a reproducible README.
 The project is deployed read-only at **https://ledgertown.vercel.app/** (Vercel Hobby
 plan, free). It serves the real UI and live `town.ledgertown.testnet` state with **no
 signing keys loaded**, so every figure and explorer link is real, but the trade and
-fast-forward buttons are disabled and every action endpoint returns `503`.
+fast-forward buttons are disabled: valid play/advance requests return `503`, invalid
+input `400`, oversized bodies `413`, and owner-only/deposit routes are refused with
+`400`.
 
 Public play mode is deliberately **not** enabled: the contract has a single shared
 `Player` purse, so a public play deployment would put one funded shared signer behind
@@ -65,8 +67,15 @@ NEAR is the **authoritative ledger and the source of the agents' autonomy**:
 
 ## 4. Judge demo script (60 seconds)
 
-1. Open the play UI (live state of `town.ledgertown.testnet`). Point at the four
-   shops: each shows its own account, cash, stock, price and last decision.
+The **interactive** demo (gather / sell / advance / invest) runs in **local play mode**
+(§2 above): the hosted site is the key-free read-only view of the same contract, so its
+trade and fast-forward buttons are intentionally disabled. The public URL is shown to
+prove the state is live; the clicking happens locally.
+
+1. Open the public read-only view (**https://ledgertown.vercel.app/**) to show the live
+   `town.ledgertown.testnet` state, then switch to the local play UI for the interaction.
+   Point at the four shops: each shows its own account, cash, stock, price and last
+   decision.
 2. Click **Gather iron**, then **Sell iron** to the smith. Show the cargo and credits
    change and the new hash appear under "Your transactions"; open it on the explorer.
 3. Click **Advance one day** a few times (or **Fast-forward 7 days**); show prices move
@@ -82,15 +91,17 @@ from the README) and show `demo-log.json` plus the explorer hashes.
 ## 5. Evidence already verified (see README "Evidence")
 
 - Contract `cargo test` — **11 passed**, incl. exact 30-day parity vs the reference.
-- `node --test tests/*.test.js` — **49 passed** (policy, failure detection, chain guard,
+- `node --test tests/*.test.js` — **50 passed** (policy, failure detection, chain guard,
   server guards, handler, town client, Vercel entry).
 - Reference model — `feasibility/tests.py` **25/25**; `feasibility/exploits.py` **39/39**.
 - Live parity vs deployed `town.ledgertown.testnet` — **PASS, 120 rows, 0 mismatches**.
 - Lifecycle — `CLOSED` day 22 → `REOPENED` day 31, ending `open` (14 txs).
 - Merchant agents — 8 real signed `merchant_decide` txs, accepted and recorded.
 - Public deployment — `https://ledgertown.vercel.app/` read-only: `/healthz` and
-  `/api/state` serve live day-51 state over the public internet with no keys; owner-only
-  and `deposit` routes return `400`; oversized/malformed bodies are rejected.
+  `/api/state` serve live day-51 state over the public internet with no keys; nested
+  routes (`/api/action/<name>`) reach the handler (valid actions `503` read-only,
+  owner-only/deposit `400`, invalid input `400`, oversized body `413`); all security
+  headers present; browser console clean.
 - UI — no horizontal overflow at 320/390/768/1280/1440 px; text contrast ≥ AA; each
   action links to its real explorer transaction.
 
@@ -118,8 +129,8 @@ from their answers and sends only after they confirm. `website` must stay absent
 - [x] Repository is **public** (`itzebe/ledgertown`).
 - [x] `LICENSE` file present (Q-014), MIT, holder `itzebe`.
 - [x] README states what is real vs baseline (Q-002/Q-003) and how to reproduce.
-- [x] PR #1 merged to `main`; PR #2 (public release) merges the Vercel path (judges read
-      the default branch).
+- [x] PR #1, #2 (public release) and #3 (Vercel nested-route fix) merged to `main`
+      (judges read the default branch).
 - [ ] Demo video recorded and X post published by the human (`@NEARProtocol`, `#NEARHackathon`).
 - [ ] Payload printed and confirmed by the human; sent once.
 - [x] Hosted demo live (read-only) at `https://ledgertown.vercel.app/`; keep up through 2026-11-18.
