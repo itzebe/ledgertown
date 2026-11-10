@@ -141,6 +141,8 @@
   button:hover{background:#e2d8c4}
   button:active{transform:translateY(1px)}
   button:focus-visible{outline:2.5px solid var(--copper);outline-offset:2px}
+  a:focus-visible{outline:2.5px solid var(--copper);outline-offset:2px;border-radius:2px}
+  input:focus-visible{outline:2.5px solid var(--copper);outline-offset:1px}
   button.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
   button.primary:hover{background:#332d26}
   button:disabled{opacity:.45;cursor:not-allowed}
@@ -218,6 +220,42 @@
   .delta{font-family:var(--mono);font-size:11.5px;margin-left:5px}
   .delta.up{color:var(--green)} .delta.down{color:var(--red)} .delta.flat{color:var(--muted)}
 
+  /* ---- play band: wallet, challenges, actions ---- */
+  .play{grid-column:1/-1;border:1.5px solid var(--ink);border-radius:5px;background:var(--paper2);
+    padding:16px 18px;display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.4fr);gap:22px}
+  @media(max-width:900px){.play{grid-template-columns:1fr;gap:16px}}
+  .play h2{font-size:12px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);
+    margin:0 0 10px;font-weight:600}
+  .wrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .wchip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--ink);border-radius:999px;
+    padding:4px 12px;font-family:var(--mono);font-size:12.5px;background:var(--paper);max-width:100%}
+  .wchip .id{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .wchip.on{border-color:var(--green);color:var(--green)}
+  .wchip.pending{border-color:var(--gold);color:var(--gold)}
+  .wchip.err{border-color:var(--red);color:var(--red)}
+  .wnote{font-size:12.5px;color:var(--ink2);margin:9px 0 0;line-height:1.45}
+  .wnote b{color:var(--ink)}
+  .wnote a{white-space:nowrap}
+  .networth{display:flex;align-items:baseline;gap:8px;margin-top:12px}
+  .networth .big{font-family:var(--mono);font-size:31px;letter-spacing:-.02em}
+  .networth .cap{align-self:center}
+  .netbreak{font-size:11.5px;color:var(--muted);margin-top:3px}
+
+  .challenges{display:grid;gap:9px;margin:0}
+  .chal{border:1px solid var(--rule);border-left:4px solid var(--copper);border-radius:4px;
+    background:rgba(255,255,255,.42);padding:10px 13px}
+  .chal .ct{font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+  .chal .cd{font-size:12.5px;color:var(--ink2);margin-top:3px;line-height:1.45}
+  .chal .do{margin-top:9px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chal .do .cap{align-self:center}
+
+  .playfield{display:grid;gap:16px}
+  .warnbox{border:1px solid var(--gold);border-left:4px solid var(--gold);border-radius:4px;
+    background:rgba(122,90,18,.06);padding:10px 13px;font-size:12.5px;color:var(--ink2)}
+  .warnbox b{color:var(--ink)}
+  .errbox{border:1px solid var(--red);border-left:4px solid var(--red);border-radius:4px;
+    background:rgba(161,51,42,.06);padding:10px 13px;font-size:12.5px;color:var(--red)}
+
   footer{max-width:var(--wrap);margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:12.5px}
 
   @media (max-width:520px){
@@ -260,6 +298,20 @@
 <main>
   <div id="banner-slot"></div>
 
+  <section class="play" aria-label="Play Ledgertown">
+    <div>
+      <h2>Your seat in the town</h2>
+      <div id="wallet-slot"></div>
+    </div>
+    <div class="playfield">
+      <div>
+        <h2>What the town is asking for</h2>
+        <div class="challenges" id="challenges"></div>
+      </div>
+      <div id="play-actions"></div>
+    </div>
+  </section>
+
   <div>
     <section>
       <h2 class="sec">The market <span class="hint" id="market-hint">four shops, each quoting every good</span></h2>
@@ -295,22 +347,16 @@
       <h2 class="sec">Your purse</h2>
       <div class="purse">
         <div class="row"><span class="cap">Credits</span><span class="big num" id="pcash">—</span></div>
-        <div class="row"><span class="cap">Deposited</span><span class="num" id="pdep">—</span></div>
+        <div class="row"><span class="cap">Net worth</span><span class="num" id="pnet">—</span></div>
         <span class="cap" style="display:block;margin-top:9px">Cargo</span>
         <div class="inv" id="pinv"><span class="muted">empty</span></div>
-        <p class="shared" id="shared-note">One shared on-chain purse — every visitor trades from the same credits.</p>
+        <p class="shared" id="shared-note">Connect a wallet to open your own purse.</p>
         <div class="actions">
-          <span class="cap" style="align-self:center">Gather (free)</span>
+          <span class="cap" style="align-self:center">Gather (free, no NEAR)</span>
           <button class="gather" data-gather="grain">grain</button>
           <button class="gather" data-gather="iron">iron</button>
           <button class="gather" data-gather="cloth">cloth</button>
           <button class="gather" data-gather="ale">ale</button>
-        </div>
-        <div class="actions" style="margin-top:12px">
-          <span class="cap" style="align-self:center">Market clock</span>
-          <button class="primary" id="advance">Advance one day ▸</button>
-          <button id="advance7">Fast-forward 7 days ▸▸</button>
-          <span class="muted num" id="prog" role="status" aria-live="polite" style="font-size:11.5px"></span>
         </div>
       </div>
     </section>

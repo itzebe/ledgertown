@@ -279,3 +279,92 @@ test("static .json assets are served as application/json (provenance panel)", as
   assert.ok(body.eventTx.CLOSED && body.eventTx.REOPENED);
 });
 
+
+// -- per-account player reads (/api/player) --------------------------------
+
+test("/api/state reports the contract's player model honestly", async () => {
+  const single = build({});
+  const s1 = await call(single.handler, "GET", "/api/state");
+  assert.equal(s1.json().model, "single");
+  assert.equal(s1.json().sharedPlayer, true);
+
+  const per = build({ getState: async () => ({ day: 9, town: [9, 100, 4, 3], model: "per-account", merchants: [], events: [] }) });
+  const s2 = await call(per.handler, "GET", "/api/state");
+  assert.equal(s2.json().model, "per-account");
+  assert.equal(s2.json().sharedPlayer, false);
+});
+
+test("/api/player returns one account's purse and never any secret", async () => {
+  const { handler } = build({
+    getPlayer: async (acct) =>
+      acct === "alice.testnet" ? { cash: 120, inventory: { grain: 5 }, deposited_yocto: 0 } : null,
+  });
+  const ok = await call(handler, "GET", "/api/player?account=alice.testnet");
+  assert.equal(ok.statusCode, 200);
+  assert.equal(ok.json().player.cash, 120);
+  assert.equal(ok.json().account, "alice.testnet");
+  assert.doesNotMatch(ok.body, /secretKey|privateKey|ed25519:|identities\.json/);
+
+  const none = await call(handler, "GET", "/api/player?account=nobody.testnet");
+  assert.equal(none.statusCode, 200);
+  assert.equal(none.json().player, null);
+});
+
+test("/api/player rejects a malformed account id", async () => {
+  const { handler } = build();
+  for (const bad of ["", "A", "has space", "UPPER.testnet", "a".repeat(70), "x!!"]) {
+    const res = await call(handler, "GET", `/api/player?account=${encodeURIComponent(bad)}`);
+    assert.equal(res.statusCode, 400, `${bad} must be rejected`);
+  }
+});
+
+test("/api/player says 501 when the town client cannot read players", async () => {
+  const { town } = fakeTown();
+  delete town.getPlayer;
+  const handler = createHandler({ town, config: { mode: "read-only", originAllowlist: [], webRoot } });
+  const res = await call(handler, "GET", "/api/player?account=alice.testnet");
+  assert.equal(res.statusCode, 501);
+});
+
+// -- resilience: state cache and upstream error classification --------------
+
+test("/api/state is cached for a short TTL so a burst of tabs cannot exhaust the RPC", async () => {
+  let calls = 0;
+  let clock = 1000;
+  const { handler } = build(
+    { getState: async () => { calls++; return { day: 51, town: [51, 1, 4, 1], merchants: [], events: [] }; } },
+    {},
+    { stateTtlMs: 2000, now: () => clock }
+  );
+  await call(handler, "GET", "/api/state");
+  await call(handler, "GET", "/api/state");
+  assert.equal(calls, 1, "two reads inside the TTL share one upstream call");
+  clock += 2500;
+  await call(handler, "GET", "/api/state");
+  assert.equal(calls, 2, "the read refreshes once the TTL expires");
+});
+
+test("the cache can be disabled for deterministic tests", async () => {
+  let calls = 0;
+  const { handler } = build(
+    { getState: async () => { calls++; return { day: 1, town: [1, 0, 0, 0], merchants: [], events: [] }; } },
+    {},
+    { stateTtlMs: 0 }
+  );
+  await call(handler, "GET", "/api/state");
+  await call(handler, "GET", "/api/state");
+  assert.equal(calls, 2);
+});
+
+test("an upstream RPC failure is reported as 502, not a misleading 400 or a fake 200", async () => {
+  const { handler } = build({ getState: async () => { throw new Error("429 Too Many Requests"); } });
+  const res = await call(handler, "GET", "/api/state");
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.json().ok, false);
+});
+
+test("validation errors keep their 4xx status (not turned into 502)", async () => {
+  const { handler } = build();
+  const res = await call(handler, "POST", "/api/action/gather", { good: "iron", units: 0 });
+  assert.equal(res.statusCode, 400);
+});

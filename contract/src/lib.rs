@@ -11,6 +11,7 @@
 //! driven through the contract be compared, day by day, against the reference.
 
 use near_sdk::json_types::U128;
+use near_sdk::store::IterableMap;
 use near_sdk::{env, near, AccountId, NearToken, PanicOnDefault, Promise};
 
 /// Fail with a message the NEAR runtime keeps in the receipt.
@@ -55,6 +56,16 @@ const STOCK_MAX: i128 = 400;
 const D_MAX: i128 = 400;
 const CREDITS_PER_NEAR: i128 = 1000;
 const YOCTO_PER_NEAR: i128 = 1_000_000_000_000_000_000_000_000;
+
+/// Per-player inventory ceiling. A single gather call already caps at 50, so
+/// this only ever bites after many calls; it bounds storage growth per account.
+const PLAYER_STOCK_MAX: i128 = 500;
+/// Cap on the lifetime NEAR a single account may deposit, so a public
+/// deployment that ever exposes a funded signer cannot be drained arbitrarily.
+/// Expressed in yoctoNEAR (100 NEAR).
+const PLAYER_DEPOSIT_CAP_YOCTO: i128 = 100 * YOCTO_PER_NEAR;
+/// Max number of distinct players whose purses are tracked on chain.
+const MAX_PLAYERS: u32 = 100_000;
 
 fn good_ref(g: &str) -> i128 {
     GOODS.iter().find(|x| x.0 == g).map(|x| x.1).unwrap_or(0)
@@ -189,13 +200,37 @@ pub struct Shock {
     pub end: u64,
 }
 
+/// The original on-chain layout, kept solely so a state migration can read it.
+/// Field order/types MUST mirror the deployed contract exactly: Borsh is
+/// positional, so this is the authoritative description of the bytes that a
+/// `deploy` + `migrate` upgrade must interpret. It is never used at runtime
+/// after migration.
+#[near(serializers = [borsh])]
+#[derive(Clone)]
+pub struct OldContract {
+    pub owner: AccountId,
+    pub day: u64,
+    pub merchants: BTreeMap<String, Merchant>,
+    pub player: Player,
+    pub events: Vec<Event>,
+    pub shocks: Vec<Shock>,
+    pub next_event_id: u64,
+    pub lifeline_enabled: bool,
+    pub total_credits_minted: i128,
+    pub total_fixed_paid: i128,
+    pub total_revenue: i128,
+}
+
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct Contract {
     pub owner: AccountId,
     pub day: u64,
     pub merchants: BTreeMap<String, Merchant>,
-    pub player: Player,
+    /// Per-account player purses, keyed by the player's own NEAR account id.
+    /// Each player may only ever touch their own entry; identity comes from
+    /// `env::predecessor_account_id()`, never from an argument.
+    pub players: IterableMap<AccountId, Player>,
     pub events: Vec<Event>,
     pub shocks: Vec<Shock>,
     pub next_event_id: u64,
@@ -213,11 +248,7 @@ impl Contract {
             owner,
             day: 0,
             merchants: BTreeMap::new(),
-            player: Player {
-                cash: 0,
-                inventory: BTreeMap::new(),
-                deposited_yocto: 0,
-            },
+            players: IterableMap::new(b"p"),
             events: Vec::new(),
             shocks: Vec::new(),
             next_event_id: 0,
@@ -292,11 +323,12 @@ impl Contract {
         self.total_credits_minted = 0;
         self.total_fixed_paid = 0;
         self.total_revenue = 0;
-        self.player = Player {
-            cash: 0,
-            inventory: BTreeMap::new(),
-            deposited_yocto: 0,
-        };
+        // Clear every player purse. Iterating the map (not a single field) is
+        // what makes reset work with the per-account model.
+        let keys: Vec<AccountId> = self.players.keys().cloned().collect();
+        for k in keys {
+            self.players.remove(&k);
+        }
         for id in self.merchant_ids() {
             let mut m = self.merchants.get(&id).unwrap().clone();
             let cost = good_cost(&m.specialty);
@@ -680,14 +712,56 @@ impl Contract {
 
     // -- player actions -----------------------------------------------------
 
+    /// Create (or return) the caller's own purse. Idempotent. Identity is the
+    /// transaction's `predecessor` — a wallet cannot create or touch another
+    /// account's purse.
+    #[payable]
+    pub fn player_init(&mut self) {
+        let player = env::predecessor_account_id();
+        if self.players.contains_key(&player) {
+            return;
+        }
+        ensure!(
+            self.players.len() < MAX_PLAYERS,
+            "player capacity reached"
+        );
+        self.players.insert(
+            player.clone(),
+            Player {
+                cash: 0,
+                inventory: BTreeMap::new(),
+                deposited_yocto: 0,
+            },
+        );
+        self.push_event(self.day, "player", "JOIN", 0, "player joined the town");
+    }
+
+    /// Owner-only, on-chain probe: is `player`'s purse initialised?
+    /// Reading another account's *existence* is harmless; reading their
+    /// balances or moving their credits is not, and is not exposed.
+    pub fn is_player_initialized(&self, player: AccountId) -> bool {
+        self.players.contains_key(&player)
+    }
+
     #[payable]
     pub fn player_deposit(&mut self) {
+        let player = env::predecessor_account_id();
         let yocto = env::attached_deposit().as_yoctonear() as i128;
         ensure!(yocto > 0, "attach NEAR to deposit");
         let credits = yocto / (YOCTO_PER_NEAR / CREDITS_PER_NEAR);
         ensure!(credits > 0, "deposit too small");
-        self.player.cash += credits;
-        self.player.deposited_yocto += yocto as u128;
+        let mut p = self.players.get(&player).cloned().unwrap_or(Player {
+            cash: 0,
+            inventory: BTreeMap::new(),
+            deposited_yocto: 0,
+        });
+        ensure!(
+            p.deposited_yocto as i128 + yocto <= PLAYER_DEPOSIT_CAP_YOCTO,
+            "deposit cap reached"
+        );
+        p.cash += credits;
+        p.deposited_yocto += yocto as u128;
+        self.players.insert(player, p);
         self.total_credits_minted += credits;
         self.push_event(
             self.day,
@@ -698,26 +772,45 @@ impl Contract {
         );
     }
 
-    /// Deterministic free action: the player gathers raw goods (capped).
+    /// Deterministic free action: the caller gathers raw goods into their own
+    /// inventory (capped per call and in total).
     pub fn player_gather(&mut self, good: String, units: U128) {
         ensure!(GOODS.iter().any(|g| g.0 == good), "unknown good");
         let units: i128 = units.0 as i128;
         ensure!(units > 0 && units <= 50, "gather 1..=50 per call");
-        let inv = *self.player.inventory.get(&good).unwrap_or(&0);
-        self.player.inventory.insert(good.clone(), inv + units);
+        let player = env::predecessor_account_id();
+        let mut p = self.players.get(&player).cloned().unwrap_or(Player {
+            cash: 0,
+            inventory: BTreeMap::new(),
+            deposited_yocto: 0,
+        });
+        let inv = *p.inventory.get(&good).unwrap_or(&0);
+        ensure!(
+            inv + units <= PLAYER_STOCK_MAX,
+            "inventory limit for {} reached",
+            good
+        );
+        p.inventory.insert(good.clone(), inv + units);
+        self.players.insert(player, p);
         self.push_event(self.day, "player", "GATHER", units, &format!("gathered {}", good));
     }
 
     pub fn player_sell_to(&mut self, merchant_id: String, good: String, units: U128) {
         let units: i128 = units.0 as i128;
         ensure!(units > 0, "units must be positive");
+        let player = env::predecessor_account_id();
+        let mut p = self.players.get(&player).cloned().unwrap_or(Player {
+            cash: 0,
+            inventory: BTreeMap::new(),
+            deposited_yocto: 0,
+        });
         let mut m = self.merchants.get(&merchant_id).expect("no merchant").clone();
         ensure!(m.state == "open", "merchant closed");
         let bid = match m.bid_price.get(&good) {
             Some(b) => *b,
             None => env::panic_str("merchant does not quote this good"),
         };
-        let have = *self.player.inventory.get(&good).unwrap_or(&0);
+        let have = *p.inventory.get(&good).unwrap_or(&0);
         let room = STOCK_MAX - m.units_or0(&good);
         let mut sell = units.min(have).min(room.max(0));
         let spendable = (m.cash - 2 * m.fixed_cost).max(0);
@@ -731,8 +824,9 @@ impl Contract {
         let cb = *m.cost_basis.get(&good).unwrap_or(&0);
         m.cost_basis.insert(good.clone(), cb + cost);
         self.merchants.insert(merchant_id.clone(), m);
-        self.player.cash += cost;
-        self.player.inventory.insert(good.clone(), have - sell);
+        p.cash += cost;
+        p.inventory.insert(good.clone(), have - sell);
+        self.players.insert(player, p);
         self.push_event(
             self.day,
             &merchant_id,
@@ -745,6 +839,12 @@ impl Contract {
     pub fn player_buy_from(&mut self, merchant_id: String, good: String, units: U128) {
         let units: i128 = units.0 as i128;
         ensure!(units > 0, "units must be positive");
+        let player = env::predecessor_account_id();
+        let mut p = self.players.get(&player).cloned().unwrap_or(Player {
+            cash: 0,
+            inventory: BTreeMap::new(),
+            deposited_yocto: 0,
+        });
         let mut m = self.merchants.get(&merchant_id).expect("no merchant").clone();
         ensure!(m.state == "open", "merchant closed");
         let price = match m.list_price.get(&good) {
@@ -754,8 +854,14 @@ impl Contract {
         let avail = m.units_or0(&good);
         let buy = units.min(avail);
         ensure!(buy > 0, "merchant has no stock");
+        let have = *p.inventory.get(&good).unwrap_or(&0);
+        ensure!(
+            have + buy <= PLAYER_STOCK_MAX,
+            "inventory limit for {} reached",
+            good
+        );
         let cost = buy * price;
-        ensure!(cost <= self.player.cash, "not enough credits");
+        ensure!(cost <= p.cash, "not enough credits");
         m.cash += cost;
         m.inventory.insert(good.clone(), avail - buy);
         let cb = *m.cost_basis.get(&good).unwrap_or(&0);
@@ -763,9 +869,9 @@ impl Contract {
         let cogs = round_half_up(cn * buy, cd);
         m.cost_basis.insert(good.clone(), (cb - cogs).max(0));
         self.merchants.insert(merchant_id.clone(), m);
-        self.player.cash -= cost;
-        let have = *self.player.inventory.get(&good).unwrap_or(&0);
-        self.player.inventory.insert(good.clone(), have + buy);
+        p.cash -= cost;
+        p.inventory.insert(good.clone(), have + buy);
+        self.players.insert(player, p);
         self.push_event(
             self.day,
             &merchant_id,
@@ -779,10 +885,16 @@ impl Contract {
     pub fn player_invest(&mut self, merchant_id: String, amount: U128) {
         let amount: i128 = amount.0 as i128;
         ensure!(amount > 0, "amount must be positive");
-        ensure!(self.player.cash >= amount, "not enough credits");
+        let player = env::predecessor_account_id();
+        let mut p = self.players.get(&player).cloned().unwrap_or(Player {
+            cash: 0,
+            inventory: BTreeMap::new(),
+            deposited_yocto: 0,
+        });
+        ensure!(p.cash >= amount, "not enough credits");
         let mut m = self.merchants.get(&merchant_id).expect("no merchant").clone();
         ensure!(m.state == "closed", "merchant is not closed");
-        self.player.cash -= amount;
+        p.cash -= amount;
         m.cash += amount;
         if m.cash >= 2 * m.fixed_cost {
             m.state = "open".to_string();
@@ -798,6 +910,7 @@ impl Contract {
                 "below recovery threshold",
             );
         }
+        self.players.insert(player, p);
         self.merchants.insert(merchant_id, m);
     }
 
@@ -882,6 +995,13 @@ impl Contract {
 
     // -- views --------------------------------------------------------------
 
+    /// Capability probe: identifies the player model this contract exposes.
+    /// Absent on the original single-purse contract, so a client can tell the
+    /// two apart and label the interface honestly (see web/app.js).
+    pub fn player_model(&self) -> String {
+        "per-account".to_string()
+    }
+
     pub fn get_day(&self) -> u64 {
         self.day
     }
@@ -906,15 +1026,19 @@ impl Contract {
         self.merchants.values().cloned().collect()
     }
 
-    pub fn get_player(&self) -> Player {
-        self.player.clone()
+    /// A player's purse for `account`. On-chain state is publicly readable (a
+    /// property of any blockchain); the website only ever asks for the
+    /// connected account's own purse. Crucially, no *mutation* accepts an
+    /// account argument — every action derives identity from the predecessor.
+    pub fn get_player(&self, account: AccountId) -> Option<Player> {
+        self.players.get(&account).cloned()
     }
 
     pub fn get_town(&self) -> (u64, i128, i128, i128) {
-        // (day, merchant cash total, open count, player cash)
+        // (day, merchant cash total, open count, number of player purses)
         let total: i128 = self.merchants.values().map(|m| m.cash).sum();
         let open = self.merchants.values().filter(|m| m.state == "open").count() as i128;
-        (self.day, total, open, self.player.cash)
+        (self.day, total, open, self.players.len() as i128)
     }
 
     /// Full snapshot for the UI/driver in one call.
@@ -944,9 +1068,9 @@ impl Contract {
             })
             .collect();
         format!(
-            r#"{{"day":{},"player_cash":{},"player_inv":{{}},"merchants":[{}],"events":{},"event_count":{}}}"#,
+            r#"{{"day":{},"player_count":{},"merchants":[{}],"events":{},"event_count":{}}}"#,
             self.day,
-            self.player.cash,
+            self.players.len(),
             merchants.join(","),
             self.events.len(),
             self.next_event_id
@@ -996,5 +1120,45 @@ impl Contract {
     pub fn owner_withdraw(&mut self, amount: NearToken) {
         self.assert_owner();
         Promise::new(self.owner.clone()).transfer(amount).detach();
+    }
+
+    /// One-time, owner-only upgrade from the original single-`Player` layout to
+    /// the per-account `players` map. The existing shared purse becomes the
+    /// owner's own purse (the town's "resident" player), so no credits,
+    /// inventory or deposited-NEAR accounting is lost; every merchant, event,
+    /// shock and town counter is carried over verbatim.
+    ///
+    /// Borsh is positional, so this re-reads the deployed bytes as `OldContract`
+    /// and rewrites the same value under the new struct. `#[init(ignore_state)]`
+    /// tells the SDK to skip deserialising the old state into the new struct
+    /// (which would fail on the changed field) and lets this method do the
+    /// conversion explicitly. Called with `deploy` + `migrate` in one batch.
+    #[init(ignore_state)]
+    pub fn migrate() -> Self {
+        let old: OldContract = env::state_read().unwrap_or_else(|| env::panic_str("no state"));
+        ensure!(
+            env::predecessor_account_id() == old.owner,
+            "migrate: owner only"
+        );
+        let mut players = IterableMap::new(b"p");
+        if old.player.cash != 0
+            || old.player.deposited_yocto != 0
+            || !old.player.inventory.is_empty()
+        {
+            players.insert(old.owner.clone(), old.player);
+        }
+        Self {
+            owner: old.owner,
+            day: old.day,
+            merchants: old.merchants,
+            players,
+            events: old.events,
+            shocks: old.shocks,
+            next_event_id: old.next_event_id,
+            lifeline_enabled: old.lifeline_enabled,
+            total_credits_minted: old.total_credits_minted,
+            total_fixed_paid: old.total_fixed_paid,
+            total_revenue: old.total_revenue,
+        }
     }
 }

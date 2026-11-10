@@ -7,6 +7,8 @@
     "keys": "node driver/keys.js",
     "accounts": "node driver/accounts.js",
     "deploy": "node driver/deploy.js",
+    "upgrade": "node driver/upgrade.js",
+    "verify:migration": "node scripts/verify-migration.js",
     "town": "node driver/town.js",
     "agent": "node driver/agent.js",
     "demo": "node driver/demo.js",
@@ -17,6 +19,12 @@
     "start": "node web/server.js"
   },
   "dependencies": {
-    "near-api-js": "^5.1.1"
+    "buffer": "^6.0.3",
+    "near-api-js": "^5.1.1",
+    "process": "^0.11.10",
+    "util": "^0.12.5"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }
